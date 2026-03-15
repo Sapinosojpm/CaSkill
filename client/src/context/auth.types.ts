@@ -5,6 +5,7 @@ export type AuthUser = {
   name: string;
   email: string;
   role: AppRole;
+  pointsBalance: number;
   createdAt: string;
 };
 

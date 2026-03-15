@@ -13,6 +13,9 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().min(1).default("7d"),
   UPLOAD_DIR: z.string().min(1).default("./uploads"),
   MAX_UPLOAD_SIZE_MB: z.coerce.number().positive().default(25),
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  STRIPE_CURRENCY: z.string().min(3).default("usd"),
 });
 
 const parsed = envSchema.safeParse(process.env);

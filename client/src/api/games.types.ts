@@ -72,4 +72,19 @@ export type SubmitScoreResponse = {
   };
 };
 
+export type MatchmakingStatus = {
+  match: {
+    queueEntryId: string;
+    gameId: string;
+    stakePoints: number;
+    status: string;
+    matchedAt: string | null;
+    queuedAt: string;
+    opponent: {
+      id: string;
+      name: string;
+    } | null;
+  } | null;
+};
+
 

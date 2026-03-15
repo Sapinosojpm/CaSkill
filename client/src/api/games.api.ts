@@ -1,5 +1,12 @@
 import { api } from "./api";
-import type { GameItem, LeaderboardEntry, PlayableGame, StartSessionResponse, SubmitScoreResponse } from "./games.types";
+import type {
+  GameItem,
+  LeaderboardEntry,
+  MatchmakingStatus,
+  PlayableGame,
+  StartSessionResponse,
+  SubmitScoreResponse,
+} from "./games.types";
 
 export async function fetchGames() {
   const response = await api.get<{ games: GameItem[] }>("/games");
@@ -23,6 +30,23 @@ export async function fetchLeaderboard(gameId: string) {
 
 export async function startGameSession(gameId: string) {
   const response = await api.post<StartSessionResponse>("/sessions/start", { gameId });
+  return response.data;
+}
+
+export async function findMatchmaking(gameId: string, stakePoints: number) {
+  const response = await api.post<MatchmakingStatus>("/sessions/matchmaking/find", { gameId, stakePoints });
+  return response.data;
+}
+
+export async function fetchMatchmakingStatus(gameId: string, stakePoints: number) {
+  const response = await api.get<MatchmakingStatus>(`/sessions/matchmaking/${gameId}`, {
+    params: { stakePoints },
+  });
+  return response.data;
+}
+
+export async function cancelMatchmaking(queueEntryId: string) {
+  const response = await api.post<MatchmakingStatus>("/sessions/matchmaking/cancel", { queueEntryId });
   return response.data;
 }
 

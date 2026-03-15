@@ -19,6 +19,10 @@ const adminLinks = [
   { to: "/admin/cheat-flags", label: "Cheat Flags" },
 ];
 
+const playerLinks = [
+  { to: "/store", label: "Store" },
+];
+
 function navClassName(isActive: boolean) {
   return [
     "rounded-full border px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.24em] [font-family:var(--font-accent)] transition",
@@ -31,7 +35,7 @@ function navClassName(isActive: boolean) {
 export function AppShell() {
   const { user, isAuthenticated, logout } = useAuth();
 
-  const roleLinks = user?.role === "ADMIN" ? adminLinks : user?.role === "CREATOR" ? creatorLinks : [];
+  const roleLinks = user?.role === "ADMIN" ? adminLinks : user?.role === "CREATOR" ? creatorLinks : user?.role === "PLAYER" ? playerLinks : [];
 
   return (
     <div className="grid-fade min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
@@ -60,6 +64,11 @@ export function AppShell() {
                 <ButtonLink size="sm" to="/profile" tone="ghost">
                   Profile
                 </ButtonLink>
+                {user.role === "PLAYER" ? (
+                  <div className="rounded-full border border-[rgba(232,255,71,0.28)] bg-[rgba(232,255,71,0.12)] px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[var(--color-primary)]">
+                    {user.pointsBalance} pts
+                  </div>
+                ) : null}
                 <div className="rounded-2xl border border-[var(--color-border)] bg-[rgba(17,17,16,0.82)] px-4 py-3">
                   <p className="text-sm font-semibold">{user.name}</p>
                   <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-muted)]">{user.role}</p>

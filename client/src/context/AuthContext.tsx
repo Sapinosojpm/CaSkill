@@ -15,6 +15,7 @@ type AuthContextValue = {
   isBootstrapping: boolean;
   login: (input: LoginInput) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
+  refreshUser: () => Promise<void>;
   logout: () => void;
 };
 
@@ -24,14 +25,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
 
+  async function refreshUser() {
+    try {
+      const response = await api.get<{ user: AuthUser }>("/auth/me");
+      setUser(response.data.user);
+    } catch {
+      clearStoredToken();
+      setUser(null);
+      throw new Error("Unable to refresh user");
+    }
+  }
+
   useEffect(() => {
     async function bootstrap() {
       try {
-        const response = await api.get<{ user: AuthUser }>("/auth/me");
-        setUser(response.data.user);
+        await refreshUser();
       } catch {
-        clearStoredToken();
-        setUser(null);
+        // refreshUser already clears invalid auth state
       } finally {
         setIsBootstrapping(false);
       }
@@ -57,6 +67,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       register: async (input) => {
         await handleAuthResponse(api.post<AuthResponse>("/auth/register", input));
       },
+      refreshUser,
       logout: () => {
         clearStoredToken();
         setUser(null);

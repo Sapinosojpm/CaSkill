@@ -5,5 +5,6 @@ export type SafeUser = {
   name: string;
   email: string;
   role: AppUserRole;
+  pointsBalance: number;
   createdAt: Date;
 };

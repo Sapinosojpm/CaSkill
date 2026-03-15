@@ -6,6 +6,7 @@ import { creatorRouter } from "../modules/creator/creator.routes.js";
 import { gamesRouter } from "../modules/games/games.routes.js";
 import { scoresRouter } from "../modules/scores/scores.routes.js";
 import { sessionsRouter } from "../modules/sessions/sessions.routes.js";
+import { storeRouter } from "../modules/store/store.routes.js";
 import { waitlistRouter } from "../modules/waitlist/waitlist.routes.js";
 
 export const apiRouter = Router();
@@ -33,4 +34,5 @@ apiRouter.use("/creator", creatorRouter);
 apiRouter.use("/admin", adminRouter);
 apiRouter.use("/scores", scoresRouter);
 apiRouter.use("/sessions", sessionsRouter);
+apiRouter.use("/store", storeRouter);
 apiRouter.use("/waitlist", waitlistRouter);

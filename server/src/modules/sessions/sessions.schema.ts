@@ -4,6 +4,15 @@ export const startSessionSchema = z.object({
   gameId: z.cuid(),
 });
 
+export const findMatchSchema = z.object({
+  gameId: z.cuid(),
+  stakePoints: z.number().int().positive().max(1000),
+});
+
+export const cancelMatchSchema = z.object({
+  queueEntryId: z.cuid(),
+});
+
 export const endSessionSchema = z.object({
   sessionToken: z.string().min(8),
   lookAwayEvents: z.number().int().min(0).optional(),

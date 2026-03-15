@@ -9,6 +9,21 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "type" in error &&
+    error.type === "entity.parse.failed"
+  ) {
+    return res.status(400).json({
+      message: "Malformed JSON request body",
+      details:
+        env.NODE_ENV === "development" && "body" in error
+          ? error.body
+          : "Check the request JSON payload.",
+    });
+  }
+
   if (error instanceof AppError) {
     return res.status(error.statusCode).json({
       message: error.message,

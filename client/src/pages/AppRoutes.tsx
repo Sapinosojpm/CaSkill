@@ -17,6 +17,7 @@ import { LeaderboardPage } from "./games/LeaderboardPage";
 import { NotFoundPage } from "./games/NotFoundPage";
 import { PlayGamePage } from "./games/PlayGamePage";
 import { ProfilePage } from "./games/ProfilePage";
+import { StorePage } from "./games/StorePage";
 import { RequireAuth } from "../components/guards/RequireAuth";
 import { RequireRole } from "../components/guards/RequireRole";
 
@@ -37,6 +38,14 @@ export function AppRoutes() {
             <RequireAuth>
               <ProfilePage />
             </RequireAuth>
+          }
+        />
+        <Route
+          path="/store"
+          element={
+            <RequireRole allowedRoles={["PLAYER"]}>
+              <StorePage />
+            </RequireRole>
           }
         />
         <Route

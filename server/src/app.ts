@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import morgan from "morgan";
 import { env } from "./config/env.js";
+import { stripeWebhookHandler } from "./modules/store/store.controller.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { notFound } from "./middleware/not-found.js";
 import { apiRouter } from "./routes/index.js";
@@ -49,6 +50,7 @@ export function createApp() {
   );
 
   app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
+  app.post("/api/store/webhook/stripe", express.raw({ type: "application/json" }), stripeWebhookHandler);
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: true }));
   app.use("/uploads", express.static(uploadRoot));

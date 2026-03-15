@@ -22,6 +22,7 @@ function toSafeUser(user: SafeUser) {
     name: user.name,
     email: user.email,
     role: user.role,
+    pointsBalance: user.pointsBalance,
     createdAt: user.createdAt,
   };
 }
@@ -50,6 +51,7 @@ export async function register(input: RegisterInput) {
       name: true,
       email: true,
       role: true,
+      pointsBalance: true,
       createdAt: true,
     },
   });
@@ -93,6 +95,7 @@ export async function login(input: LoginInput) {
       name: user.name,
       email: user.email,
       role: user.role as AppUserRole,
+      pointsBalance: user.pointsBalance,
       createdAt: user.createdAt,
     }),
   };

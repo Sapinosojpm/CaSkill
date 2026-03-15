@@ -46,12 +46,34 @@ enum CheatSeverity {
   HIGH
 }
 
+enum MatchQueueStatus {
+  WAITING
+  MATCHED
+  CANCELLED
+}
+
+enum PointTransactionType {
+  PURCHASE
+  STAKE
+  WIN
+  CREATOR_SHARE
+  ADJUSTMENT
+}
+
+enum PaymentOrderStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+  FAILED
+}
+
 model User {
   id                 String           @id @default(cuid())
   name               String
   email              String           @unique
   passwordHash       String
   role               UserRole
+  pointsBalance      Int              @default(0)
   createdAt          DateTime         @default(now())
   createdGames       Game[]           @relation("GameCreator")
   submissions        GameSubmission[] @relation("SubmissionCreator")
@@ -60,6 +82,9 @@ model User {
   scores             Score[]
   cheatFlags         CheatFlag[]
   playSessions       PlaySession[]
+  matchmakingEntries MatchQueueEntry[]
+  pointTransactions  PointTransaction[]
+  paymentOrders      PaymentOrder[]
 
   @@index([role])
 }
@@ -100,10 +125,84 @@ model Game {
   scores              Score[]
   cheatFlags          CheatFlag[]
   playSessions        PlaySession[]
+  matchmakingEntries  MatchQueueEntry[]
 
   @@index([status])
   @@index([creatorId])
   @@index([category])
+}
+
+model MatchQueueEntry {
+  id              String           @id @default(cuid())
+  userId          String
+  gameId          String
+  stakePoints     Int
+  status          MatchQueueStatus @default(WAITING)
+  opponentEntryId String?
+  matchedAt       DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game            Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, status, createdAt])
+  @@index([userId, status])
+  @@index([stakePoints, status])
+}
+
+model PointPackage {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  pointsAmount  Int
+  priceCents    Int
+  currency      String         @default("usd")
+  isActive      Boolean        @default(true)
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  paymentOrders PaymentOrder[]
+
+  @@index([isActive, sortOrder])
+}
+
+model PaymentOrder {
+  id                     String             @id @default(cuid())
+  userId                 String
+  pointPackageId         String
+  status                 PaymentOrderStatus @default(PENDING)
+  checkoutSessionId      String?            @unique
+  stripePaymentIntentId  String?
+  priceCents             Int
+  currency               String             @default("usd")
+  pointsAmount           Int
+  completedAt            DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointPackage           PointPackage       @relation(fields: [pointPackageId], references: [id], onDelete: Restrict)
+  pointTransactions      PointTransaction[]
+
+  @@index([userId, status])
+  @@index([pointPackageId])
+}
+
+model PointTransaction {
+  id             String               @id @default(cuid())
+  userId         String
+  paymentOrderId String?
+  type           PointTransactionType
+  delta          Int
+  balanceAfter   Int
+  description    String
+  createdAt      DateTime             @default(now())
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentOrder   PaymentOrder?        @relation(fields: [paymentOrderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([paymentOrderId])
+  @@index([type])
 }
 
 model GameSubmission {

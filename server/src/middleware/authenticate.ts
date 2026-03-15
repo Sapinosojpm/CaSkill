@@ -20,6 +20,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
       name: true,
       email: true,
       role: true,
+      pointsBalance: true,
       createdAt: true,
     },
   });

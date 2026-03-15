@@ -37,6 +37,9 @@ const prisma = new PrismaClient();
 async function main() {
   await prisma.cheatFlag.deleteMany();
   await prisma.score.deleteMany();
+  await prisma.pointTransaction.deleteMany();
+  await prisma.paymentOrder.deleteMany();
+  await prisma.pointPackage.deleteMany();
   await prisma.review.deleteMany();
   await prisma.playSession.deleteMany();
   await prisma.gameSubmission.deleteMany();
@@ -68,9 +71,39 @@ async function main() {
         email: "player@caskill1.local",
         passwordHash,
         role: UserRole.PLAYER,
+        pointsBalance: 120,
       },
     }),
   ]);
+
+  await prisma.pointPackage.createMany({
+    data: [
+      {
+        name: "Starter Stack",
+        description: "A light top-up for quick matches and practice runs.",
+        pointsAmount: 100,
+        priceCents: 499,
+        currency: "usd",
+        sortOrder: 1,
+      },
+      {
+        name: "Competitive Pack",
+        description: "A balanced bundle for regular ranked play.",
+        pointsAmount: 250,
+        priceCents: 999,
+        currency: "usd",
+        sortOrder: 2,
+      },
+      {
+        name: "Champion Crate",
+        description: "Best value for players grinding matches all week.",
+        pointsAmount: 700,
+        priceCents: 1999,
+        currency: "usd",
+        sortOrder: 3,
+      },
+    ],
+  });
 
   const memoryManifest = {
     title: "Memory Match",
