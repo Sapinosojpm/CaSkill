@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { ButtonLink } from "../../components/ui/Button";
@@ -7,8 +7,8 @@ import { SectionCard } from "../../components/ui/SectionCard";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { useAuth } from "../../context/AuthContext";
 import { getApiErrorMessage } from "../../utils/errors";
-import { cancelMatchmaking, fetchGame, fetchMatchmakingStatus, findMatchmaking } from "../../api/games.api";
-import type { GameItem, MatchmakingStatus } from "../../api/games.types";
+import { cancelMatchmaking, fetchGame, fetchMatchmakingStatus, fetchOpenMatchQueues, findMatchmaking, leaveActiveMatchmaking } from "../../api/games.api";
+import type { GameItem, MatchmakingStatus, OpenMatchQueue } from "../../api/games.types";
 
 const stakeOptions = [10, 25, 50];
 
@@ -21,6 +21,14 @@ export function GameDetailPage() {
   const [isFindingMatch, setIsFindingMatch] = useState(false);
   const [selectedStake, setSelectedStake] = useState(10);
   const [matchmaking, setMatchmaking] = useState<MatchmakingStatus["match"]>(null);
+  const [openQueues, setOpenQueues] = useState<OpenMatchQueue[]>([]);
+  const [isEnteringMatch, setIsEnteringMatch] = useState(false);
+  const cleanupRef = useRef({
+    gameId: "",
+    userRole: "",
+    matchmaking: null as MatchmakingStatus["match"],
+    isEnteringMatch: false,
+  });
 
   useEffect(() => {
     const currentGameId = gameId ?? "";
@@ -38,14 +46,20 @@ export function GameDetailPage() {
   }, [gameId]);
 
   useEffect(() => {
-    if (!gameId || !isAuthenticated || user?.role !== "PLAYER" || !matchmaking || matchmaking.status !== "WAITING") {
+    if (!gameId || !isAuthenticated || user?.role !== "PLAYER") {
       return;
     }
 
     const interval = window.setInterval(async () => {
       try {
-        const response = await fetchMatchmakingStatus(gameId, matchmaking.stakePoints);
-        setMatchmaking(response.match);
+        const [queuesResponse, statusResponse] = await Promise.all([
+          fetchOpenMatchQueues(gameId),
+          matchmaking ? fetchMatchmakingStatus(gameId, matchmaking.stakePoints) : Promise.resolve({ match: null }),
+        ]);
+        setOpenQueues(queuesResponse.queues);
+        if (matchmaking) {
+          setMatchmaking(statusResponse.match);
+        }
       } catch {
         // keep quiet during polling
       }
@@ -53,6 +67,52 @@ export function GameDetailPage() {
 
     return () => window.clearInterval(interval);
   }, [gameId, isAuthenticated, matchmaking, user?.role]);
+
+  useEffect(() => {
+    const currentGameId = gameId ?? "";
+    if (!currentGameId || !isAuthenticated || user?.role !== "PLAYER") {
+      return;
+    }
+
+    async function loadOpenQueues() {
+      try {
+        const [queuesResponse, statusResponse] = await Promise.all([
+          fetchOpenMatchQueues(currentGameId),
+          fetchMatchmakingStatus(currentGameId),
+        ]);
+        setOpenQueues(queuesResponse.queues);
+        setMatchmaking(statusResponse.match);
+      } catch {
+        // quiet on first render
+      }
+    }
+
+    void loadOpenQueues();
+  }, [gameId, isAuthenticated, user?.role]);
+
+  useEffect(() => {
+    cleanupRef.current = {
+      gameId: gameId ?? "",
+      userRole: user?.role ?? "",
+      matchmaking,
+      isEnteringMatch,
+    };
+  }, [gameId, isEnteringMatch, matchmaking, user?.role]);
+
+  useEffect(() => {
+    return () => {
+      const current = cleanupRef.current;
+      if (
+        current.gameId &&
+        current.userRole === "PLAYER" &&
+        current.matchmaking &&
+        !current.isEnteringMatch &&
+        (current.matchmaking.status === "WAITING" || current.matchmaking.status === "MATCHED")
+      ) {
+        void leaveActiveMatchmaking(current.gameId, { keepalive: true });
+      }
+    };
+  }, []);
 
   async function handleFindMatch() {
     if (!gameId) return;
@@ -63,6 +123,22 @@ export function GameDetailPage() {
       setMatchmaking(response.match);
     } catch (requestError) {
       setMatchError(getApiErrorMessage(requestError, "Unable to join matchmaking"));
+    } finally {
+      setIsFindingMatch(false);
+    }
+  }
+
+  async function handleJoinSpecificQueue(queue: OpenMatchQueue) {
+    if (!gameId) return;
+    setIsFindingMatch(true);
+    setMatchError("");
+    setSelectedStake(queue.stakePoints);
+    try {
+      const response = await findMatchmaking(gameId, queue.stakePoints, queue.queueEntryId);
+      setMatchmaking(response.match);
+      setOpenQueues((currentQueues) => currentQueues.filter((item) => item.queueEntryId !== queue.queueEntryId));
+    } catch (requestError) {
+      setMatchError(getApiErrorMessage(requestError, "Unable to join the selected opponent"));
     } finally {
       setIsFindingMatch(false);
     }
@@ -131,6 +207,45 @@ export function GameDetailPage() {
                 </button>
               ))}
             </div>
+            <div className="space-y-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-text)]">Open queue on this game</p>
+                  <p className="text-sm text-[var(--color-muted)]">See who is waiting, how many points they staked, and join a specific opponent.</p>
+                </div>
+                <StatusBadge label={`${openQueues.length} waiting`} tone={openQueues.length ? "warning" : "primary"} />
+              </div>
+              {openQueues.length ? (
+                <div className="space-y-3">
+                  {openQueues.map((queue) => (
+                    <div
+                      key={queue.queueEntryId}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[rgba(10,10,8,0.55)] p-4"
+                    >
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-[var(--color-text)]">{queue.opponent.name}</p>
+                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                          Waiting since {new Date(queue.queuedAt).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <StatusBadge label={`${queue.stakePoints} points`} tone="primary" />
+                        <Button
+                          className="rounded-2xl !text-black"
+                          disabled={Boolean(matchmaking) || isFindingMatch}
+                          onClick={() => void handleJoinSpecificQueue(queue)}
+                          type="button"
+                        >
+                          Challenge This Player
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--color-muted)]">No visible players are waiting on this game yet. You can create the first open queue below.</p>
+              )}
+            </div>
             {matchmaking ? (
               <div className="space-y-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-strong)] p-4">
                 <div className="flex flex-wrap items-center gap-3">
@@ -147,7 +262,20 @@ export function GameDetailPage() {
                 </p>
                 <div className="flex flex-wrap gap-3">
                   {matchmaking.status === "MATCHED" ? (
-                    <ButtonLink to="play">Enter Match</ButtonLink>
+                    <>
+                      <ButtonLink
+                        className="!text-black"
+                        onClick={() => {
+                          setIsEnteringMatch(true);
+                        }}
+                        to="play"
+                      >
+                        Enter Match
+                      </ButtonLink>
+                      <Button className="rounded-2xl" onClick={() => void leaveActiveMatchmaking(gameId).then(() => setMatchmaking(null))} tone="ghost" type="button">
+                        Leave Match
+                      </Button>
+                    </>
                   ) : (
                     <Button className="rounded-2xl" onClick={handleCancelMatch} tone="ghost" type="button">
                       Leave Queue

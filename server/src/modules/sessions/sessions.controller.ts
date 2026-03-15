@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../utils/async-handler.js";
-import { cancelMatchmaking, endSession, findMatchmaking, getMatchmakingStatus, startSession } from "./sessions.service.js";
+import { cancelMatchmaking, endSession, findMatchmaking, getMatchmakingStatus, leaveActiveMatchmaking, listOpenMatchmakingQueues, startSession } from "./sessions.service.js";
 
 export const startSessionHandler = asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json(await startSession(req.user!.id, req.body.gameId));
@@ -16,8 +16,17 @@ export const getMatchStatusHandler = asyncHandler(async (req: Request, res: Resp
   res.status(200).json(await getMatchmakingStatus(req.user!.id, gameId, Number.isNaN(stakePoints) ? undefined : stakePoints));
 });
 
+export const listOpenQueuesHandler = asyncHandler(async (req: Request, res: Response) => {
+  const gameId = Array.isArray(req.params.gameId) ? req.params.gameId[0] : req.params.gameId;
+  res.status(200).json(await listOpenMatchmakingQueues(req.user!.id, gameId));
+});
+
 export const cancelMatchHandler = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json(await cancelMatchmaking(req.user!.id, req.body.queueEntryId));
+});
+
+export const leaveActiveMatchHandler = asyncHandler(async (req: Request, res: Response) => {
+  res.status(200).json(await leaveActiveMatchmaking(req.user!.id, req.body.gameId));
 });
 
 export const endSessionHandler = asyncHandler(async (req: Request, res: Response) => {

@@ -35,6 +35,22 @@ function mapQueueResponse(entry: {
   };
 }
 
+function mapOpenQueueEntry(entry: {
+  id: string;
+  gameId: string;
+  stakePoints: number;
+  createdAt: Date;
+  user: { id: string; name: string };
+}) {
+  return {
+    queueEntryId: entry.id,
+    gameId: entry.gameId,
+    stakePoints: entry.stakePoints,
+    queuedAt: entry.createdAt,
+    opponent: entry.user,
+  };
+}
+
 export async function startSession(userId: string, gameId: string) {
   const game = await prisma.game.findFirst({
     where: { id: gameId, status: "PUBLISHED" },
@@ -87,7 +103,7 @@ export async function endSession(userId: string, input: {
   });
 }
 
-export async function findMatchmaking(userId: string, input: { gameId: string; stakePoints: number }) {
+export async function findMatchmaking(userId: string, input: { gameId: string; stakePoints: number; targetQueueEntryId?: string }) {
   const game = await prisma.game.findFirst({
     where: { id: input.gameId, status: "PUBLISHED" },
   });
@@ -126,18 +142,34 @@ export async function findMatchmaking(userId: string, input: { gameId: string; s
     };
   }
 
-  const waitingOpponent = await prisma.matchQueueEntry.findFirst({
-    where: {
-      gameId: input.gameId,
-      stakePoints: input.stakePoints,
-      status: MatchQueueStatus.WAITING,
-      userId: { not: userId },
-    },
-    orderBy: { createdAt: "asc" },
-    include: {
-      user: { select: { id: true, name: true } },
-    },
-  });
+  const waitingOpponent = input.targetQueueEntryId
+    ? await prisma.matchQueueEntry.findFirst({
+        where: {
+          id: input.targetQueueEntryId,
+          gameId: input.gameId,
+          status: MatchQueueStatus.WAITING,
+          userId: { not: userId },
+        },
+        include: {
+          user: { select: { id: true, name: true } },
+        },
+      })
+    : await prisma.matchQueueEntry.findFirst({
+        where: {
+          gameId: input.gameId,
+          stakePoints: input.stakePoints,
+          status: MatchQueueStatus.WAITING,
+          userId: { not: userId },
+        },
+        orderBy: { createdAt: "asc" },
+        include: {
+          user: { select: { id: true, name: true } },
+        },
+      });
+
+  if (input.targetQueueEntryId && !waitingOpponent) {
+    throw new AppError("Selected queue entry is no longer available", 404);
+  }
 
   if (!waitingOpponent) {
     const queuedEntry = await prisma.matchQueueEntry.create({
@@ -173,7 +205,7 @@ export async function findMatchmaking(userId: string, input: { gameId: string; s
       data: {
         userId,
         gameId: input.gameId,
-        stakePoints: input.stakePoints,
+        stakePoints: waitingOpponent.stakePoints,
         status: MatchQueueStatus.MATCHED,
         opponentEntryId: waitingOpponent.id,
         matchedAt,
@@ -193,6 +225,24 @@ export async function findMatchmaking(userId: string, input: { gameId: string; s
 
   return {
     match: mapQueueResponse(playerEntry, opponentEntry.user),
+  };
+}
+
+export async function listOpenMatchmakingQueues(userId: string, gameId: string) {
+  const queues = await prisma.matchQueueEntry.findMany({
+    where: {
+      gameId,
+      status: MatchQueueStatus.WAITING,
+      userId: { not: userId },
+    },
+    orderBy: [{ stakePoints: "asc" }, { createdAt: "asc" }],
+    include: {
+      user: { select: { id: true, name: true } },
+    },
+  });
+
+  return {
+    queues: queues.map(mapOpenQueueEntry),
   };
 }
 
@@ -252,5 +302,44 @@ export async function cancelMatchmaking(userId: string, queueEntryId: string) {
 
   return {
     match: mapQueueResponse(updated),
+  };
+}
+
+export async function leaveActiveMatchmaking(userId: string, gameId?: string) {
+  const activeEntries = await prisma.matchQueueEntry.findMany({
+    where: {
+      userId,
+      ...(gameId ? { gameId } : {}),
+      status: { in: [MatchQueueStatus.WAITING, MatchQueueStatus.MATCHED] },
+    },
+  });
+
+  if (!activeEntries.length) {
+    return { cleared: 0 };
+  }
+
+  const entryIds = new Set<string>();
+
+  for (const entry of activeEntries) {
+    entryIds.add(entry.id);
+    if (entry.opponentEntryId) {
+      entryIds.add(entry.opponentEntryId);
+    }
+  }
+
+  const cancelledAt = new Date();
+  const result = await prisma.matchQueueEntry.updateMany({
+    where: {
+      id: { in: [...entryIds] },
+      status: { in: [MatchQueueStatus.WAITING, MatchQueueStatus.MATCHED] },
+    },
+    data: {
+      status: MatchQueueStatus.CANCELLED,
+      cancelledAt,
+    },
+  });
+
+  return {
+    cleared: result.count,
   };
 }

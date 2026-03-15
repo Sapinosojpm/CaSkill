@@ -1,8 +1,9 @@
-import { api } from "./api";
+import { API_BASE_URL, api, getStoredToken } from "./api";
 import type {
   GameItem,
   LeaderboardEntry,
   MatchmakingStatus,
+  OpenMatchQueuesResponse,
   PlayableGame,
   StartSessionResponse,
   SubmitScoreResponse,
@@ -33,20 +34,47 @@ export async function startGameSession(gameId: string) {
   return response.data;
 }
 
-export async function findMatchmaking(gameId: string, stakePoints: number) {
-  const response = await api.post<MatchmakingStatus>("/sessions/matchmaking/find", { gameId, stakePoints });
+export async function findMatchmaking(gameId: string, stakePoints: number, targetQueueEntryId?: string) {
+  const response = await api.post<MatchmakingStatus>("/sessions/matchmaking/find", { gameId, stakePoints, targetQueueEntryId });
   return response.data;
 }
 
-export async function fetchMatchmakingStatus(gameId: string, stakePoints: number) {
+export async function fetchOpenMatchQueues(gameId: string) {
+  const response = await api.get<OpenMatchQueuesResponse>(`/sessions/matchmaking/${gameId}/open`);
+  return response.data;
+}
+
+export async function fetchMatchmakingStatus(gameId: string, stakePoints?: number) {
   const response = await api.get<MatchmakingStatus>(`/sessions/matchmaking/${gameId}`, {
-    params: { stakePoints },
+    params: stakePoints ? { stakePoints } : undefined,
   });
   return response.data;
 }
 
 export async function cancelMatchmaking(queueEntryId: string) {
   const response = await api.post<MatchmakingStatus>("/sessions/matchmaking/cancel", { queueEntryId });
+  return response.data;
+}
+
+export async function leaveActiveMatchmaking(gameId?: string, options?: { keepalive?: boolean }) {
+  if (options?.keepalive) {
+    const token = getStoredToken();
+    if (!token) return { cleared: 0 };
+
+    const response = await fetch(`${API_BASE_URL}/sessions/matchmaking/leave`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(gameId ? { gameId } : {}),
+      keepalive: true,
+    });
+
+    return response.json();
+  }
+
+  const response = await api.post<{ cleared: number }>("/sessions/matchmaking/leave", gameId ? { gameId } : {});
   return response.data;
 }
 

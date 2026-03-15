@@ -87,4 +87,19 @@ export type MatchmakingStatus = {
   } | null;
 };
 
+export type OpenMatchQueue = {
+  queueEntryId: string;
+  gameId: string;
+  stakePoints: number;
+  queuedAt: string;
+  opponent: {
+    id: string;
+    name: string;
+  };
+};
+
+export type OpenMatchQueuesResponse = {
+  queues: OpenMatchQueue[];
+};
+
 

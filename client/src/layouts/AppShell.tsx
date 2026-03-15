@@ -75,7 +75,9 @@ export function AppShell() {
                 </div>
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={() => {
+                    void logout();
+                  }}
                   className="rounded-full border border-[var(--color-border)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:border-[var(--color-error)] hover:text-[var(--color-error)]"
                 >
                   Logout

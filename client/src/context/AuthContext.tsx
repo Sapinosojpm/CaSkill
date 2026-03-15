@@ -7,6 +7,7 @@ import {
   type PropsWithChildren,
 } from "react";
 import { api, clearStoredToken, setStoredToken } from "../api/api";
+import { leaveActiveMatchmaking } from "../api/games.api";
 import type { AuthResponse, AuthUser, LoginInput, RegisterInput } from "./auth.types";
 
 type AuthContextValue = {
@@ -16,7 +17,7 @@ type AuthContextValue = {
   login: (input: LoginInput) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   refreshUser: () => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -68,7 +69,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         await handleAuthResponse(api.post<AuthResponse>("/auth/register", input));
       },
       refreshUser,
-      logout: () => {
+      logout: async () => {
+        try {
+          if (user?.role === "PLAYER") {
+            await leaveActiveMatchmaking();
+          }
+        } catch {
+          // keep logout resilient even if matchmaking cleanup fails
+        }
         clearStoredToken();
         setUser(null);
       },

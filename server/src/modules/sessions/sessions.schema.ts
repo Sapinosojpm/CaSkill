@@ -7,10 +7,15 @@ export const startSessionSchema = z.object({
 export const findMatchSchema = z.object({
   gameId: z.cuid(),
   stakePoints: z.number().int().positive().max(1000),
+  targetQueueEntryId: z.cuid().optional(),
 });
 
 export const cancelMatchSchema = z.object({
   queueEntryId: z.cuid(),
+});
+
+export const leaveMatchSchema = z.object({
+  gameId: z.cuid().optional(),
 });
 
 export const endSessionSchema = z.object({
