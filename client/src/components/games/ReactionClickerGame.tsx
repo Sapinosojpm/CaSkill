@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import type { GameFinishHandler } from "./types";
 
 export function ReactionClickerGame({
   onFinish,
 }: {
-  onFinish: (result: { score: number; durationSeconds: number; clientMeta: Record<string, unknown> }) => void;
+  onFinish: GameFinishHandler;
 }) {
   const [startedAt] = useState(() => Date.now());
   const [secondsLeft, setSecondsLeft] = useState(10);

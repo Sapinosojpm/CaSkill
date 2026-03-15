@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { GameFinishHandler } from "./types";
 
 const questions = [
   { prompt: "What stack powers this MVP backend?", options: ["MERN", "PERN", "LAMP", "JAMstack"], answer: "PERN" },
@@ -9,7 +10,7 @@ const questions = [
 export function QuizGame({
   onFinish,
 }: {
-  onFinish: (result: { score: number; durationSeconds: number; clientMeta: Record<string, unknown> }) => void;
+  onFinish: GameFinishHandler;
 }) {
   const [startedAt] = useState(() => Date.now());
   const [index, setIndex] = useState(0);

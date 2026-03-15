@@ -1,17 +1,25 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { PageHero } from "../../components/ui/PageHero";
 import { SectionCard } from "../../components/ui/SectionCard";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { getApiErrorMessage } from "../../utils/errors";
-import { approveAdminSubmission, fetchAdminSubmission, rejectAdminSubmission } from "../../api/admin.api";
+import {
+  approveAdminSubmission,
+  deleteAdminSubmissionGame,
+  fetchAdminSubmission,
+  rejectAdminSubmission,
+  suspendAdminSubmissionGame,
+} from "../../api/admin.api";
 import type { CreatorSubmission } from "../../api/creator.types";
 
 export function SubmissionReviewDetailPage() {
+  const navigate = useNavigate();
   const { submissionId } = useParams();
   const [submission, setSubmission] = useState<CreatorSubmission | null>(null);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -20,6 +28,7 @@ export function SubmissionReviewDetailPage() {
     async function loadSubmission() {
       try {
         setSubmission(await fetchAdminSubmission(currentSubmissionId));
+        setSuccess("");
       } catch (requestError) {
         setError(getApiErrorMessage(requestError, "Unable to load submission"));
       }
@@ -31,14 +40,47 @@ export function SubmissionReviewDetailPage() {
     if (!submission) return;
     setIsSaving(true);
     setError("");
+    setSuccess("");
     try {
       const updated =
         decision === "approve"
           ? await approveAdminSubmission(submission.id, notes)
           : await rejectAdminSubmission(submission.id, notes);
       setSubmission(updated);
+      setSuccess(decision === "approve" ? "Submission approved and published." : "Submission rejected.");
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, `Unable to ${decision} submission`));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleSuspend() {
+    if (!submission) return;
+    setIsSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const updated = await suspendAdminSubmissionGame(submission.id, notes);
+      setSubmission(updated);
+      setSuccess("Game suspended and removed from public play.");
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "Unable to suspend game"));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!submission) return;
+    setIsSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      await deleteAdminSubmissionGame(submission.id, notes);
+      navigate("/admin/submissions");
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "Unable to delete game"));
     } finally {
       setIsSaving(false);
     }
@@ -52,12 +94,14 @@ export function SubmissionReviewDetailPage() {
         description="This admin detail page will host submission metadata, build preview, review notes, and approve/reject actions."
       />
       {error ? <p className="text-sm text-[var(--color-error)]">{error}</p> : null}
+      {success ? <p className="text-sm text-[var(--color-success)]">{success}</p> : null}
       <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
         <SectionCard title="Preview area" description="Uploaded game preview will render here in the review phase.">
           {submission ? (
             <div className="space-y-3 text-sm text-[var(--color-muted)]">
               <p>Game: <span className="text-[var(--color-text)]">{submission.game.title}</span></p>
               <p>Creator: <span className="text-[var(--color-text)]">{submission.creator?.name ?? submission.creatorId}</span></p>
+              <p>Game status: <span className="text-[var(--color-text)]">{submission.game.status}</span></p>
               <p>ZIP: <span className="text-[var(--color-text)]">{submission.zipFileUrl}</span></p>
               <p>Entry file: <span className="text-[var(--color-text)]">{String(submission.manifestData.entryFile ?? "n/a")}</span></p>
               <p>Preview path: <span className="text-[var(--color-text)]">{submission.game.buildPath ?? "Not extracted in MVP"}</span></p>
@@ -68,7 +112,7 @@ export function SubmissionReviewDetailPage() {
             </div>
           )}
         </SectionCard>
-        <SectionCard title="Decision panel" description="Approve/reject controls land here in Phase 6.">
+        <SectionCard title="Decision panel" description="Approve, reject, suspend, or remove a creator game from the platform.">
           {submission ? (
             <div className="space-y-4">
               <StatusBadge label={submission.status} tone={submission.status === "APPROVED" ? "success" : submission.status === "REJECTED" ? "error" : "warning"} />
@@ -78,7 +122,7 @@ export function SubmissionReviewDetailPage() {
                 onChange={(event) => setNotes(event.target.value)}
                 placeholder="Review notes"
               />
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <button
                   className="rounded-2xl bg-[var(--color-success)] px-4 py-3 font-semibold text-black disabled:opacity-60"
                   disabled={isSaving}
@@ -94,6 +138,22 @@ export function SubmissionReviewDetailPage() {
                   type="button"
                 >
                   Reject
+                </button>
+                <button
+                  className="rounded-2xl border border-[rgba(255,159,67,0.35)] bg-[var(--color-warning)] px-4 py-3 font-semibold text-black disabled:opacity-60"
+                  disabled={isSaving}
+                  onClick={handleSuspend}
+                  type="button"
+                >
+                  Suspend / Unpublish
+                </button>
+                <button
+                  className="rounded-2xl border border-[rgba(255,77,77,0.35)] bg-transparent px-4 py-3 font-semibold text-[var(--color-error)] disabled:opacity-60"
+                  disabled={isSaving}
+                  onClick={handleDelete}
+                  type="button"
+                >
+                  Delete Game
                 </button>
               </div>
             </div>

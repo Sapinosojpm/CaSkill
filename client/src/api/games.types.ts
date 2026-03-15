@@ -11,6 +11,8 @@ export type GameItem = {
   manifestData: Record<string, unknown>;
   scoringRules: string | null;
   controls: string | null;
+  buildPath?: string | null;
+  packagePath?: string | null;
   createdAt: string;
   updatedAt: string;
   creator: {

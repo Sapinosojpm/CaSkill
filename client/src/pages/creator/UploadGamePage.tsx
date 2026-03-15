@@ -131,7 +131,7 @@ export function UploadGamePage() {
             <p className="text-sm text-[var(--color-muted)]">
               Next step: open the submission detail page and send it for admin review.
             </p>
-            <ButtonLink size="sm" to={`/creator/submissions/${result.submission.id}`}>
+            <ButtonLink className="!text-black" size="sm" to={`/creator/submissions/${result.submission.id}`}>
               View submission
             </ButtonLink>
           </div>

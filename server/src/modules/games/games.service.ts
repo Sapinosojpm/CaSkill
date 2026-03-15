@@ -9,6 +9,7 @@ function withBuiltInGameKey(title: string) {
   if (title === "Memory Match") return "memory-match";
   if (title === "Quiz Game") return "quiz-game";
   if (title === "Reaction Clicker") return "reaction-clicker";
+  if (title === "Reaction Duel") return "reaction-duel";
   return "uploaded-game";
 }
 

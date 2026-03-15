@@ -102,7 +102,17 @@ async function main() {
     scoringRules: "One point per valid click inside the active window.",
   };
 
-  const [memoryGame, quizGame, reactionGame] = await Promise.all([
+  const duelManifest = {
+    title: "Reaction Duel",
+    version: "1.0.0",
+    entryFile: "dist/index.html",
+    description: "A same-screen 1v1 reaction battle where each player races to hit the correct side first.",
+    category: "1v1 Arcade",
+    controls: "Left player uses Q, right player uses P.",
+    scoringRules: "Win rounds by reacting faster on the correct side. More round wins means a higher final score.",
+  };
+
+  const [memoryGame, quizGame, reactionGame, duelGame] = await Promise.all([
     prisma.game.create({
       data: {
         title: "Memory Match",
@@ -154,9 +164,26 @@ async function main() {
         controls: "Click only when the board goes live.",
       },
     }),
+    prisma.game.create({
+      data: {
+        title: "Reaction Duel",
+        description: "A built-in sample 1v1 duel where two players race side-by-side on the same keyboard.",
+        thumbnailUrl: "/uploads/thumbnails/reaction-duel.png",
+        category: "1v1 Arcade",
+        status: GameStatus.PUBLISHED,
+        creatorId: creator.id,
+        version: "1.0.0",
+        entryFile: "dist/index.html",
+        packagePath: "/uploads/packages/reaction-duel-v1.zip",
+        buildPath: "/uploads/extracted/reaction-duel-v1/dist",
+        manifestData: duelManifest,
+        scoringRules: "Each won round is worth 100 points plus reaction-speed bonus.",
+        controls: "Player 1 presses Q for left. Player 2 presses P for right.",
+      },
+    }),
   ]);
 
-  const [memorySubmission, quizSubmission, reactionSubmission] = await Promise.all([
+  const [memorySubmission, quizSubmission, reactionSubmission, duelSubmission] = await Promise.all([
     prisma.gameSubmission.create({
       data: {
         gameId: memoryGame.id,
@@ -193,6 +220,19 @@ async function main() {
         submittedAt: new Date("2026-03-10T14:15:00.000Z"),
       },
     }),
+    prisma.gameSubmission.create({
+      data: {
+        gameId: duelGame.id,
+        creatorId: creator.id,
+        zipFileUrl: "/uploads/packages/reaction-duel-v1.zip",
+        manifestData: duelManifest,
+        status: SubmissionStatus.APPROVED,
+        reviewerId: admin.id,
+        reviewNotes: "Good MVP sample for same-screen 1v1 gameplay.",
+        submittedAt: new Date("2026-03-05T09:45:00.000Z"),
+        reviewedAt: new Date("2026-03-05T14:00:00.000Z"),
+      },
+    }),
   ]);
 
   await prisma.review.createMany({
@@ -210,6 +250,13 @@ async function main() {
         decision: ReviewDecision.APPROVED,
         notes: "Good build. Ready for catalog.",
         createdAt: new Date("2026-03-04T12:00:00.000Z"),
+      },
+      {
+        submissionId: duelSubmission.id,
+        reviewerId: admin.id,
+        decision: ReviewDecision.APPROVED,
+        notes: "Approved as a sample 1v1 game for player testing.",
+        createdAt: new Date("2026-03-05T14:00:00.000Z"),
       },
     ],
   });

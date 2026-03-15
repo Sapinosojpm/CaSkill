@@ -29,6 +29,13 @@ export function createApp() {
   app.use(
     helmet({
       crossOriginResourcePolicy: false,
+      frameguard: false,
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          "frame-ancestors": ["'self'", ...env.CLIENT_URLS],
+        },
+      },
     }),
   );
 

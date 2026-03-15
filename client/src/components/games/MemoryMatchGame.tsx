@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { GameFinishHandler } from "./types";
 
 const symbols = ["A", "A", "B", "B", "C", "C", "D", "D"];
 
@@ -12,7 +13,7 @@ function shuffle<T>(items: T[]) {
 export function MemoryMatchGame({
   onFinish,
 }: {
-  onFinish: (result: { score: number; durationSeconds: number; clientMeta: Record<string, unknown> }) => void;
+  onFinish: GameFinishHandler;
 }) {
   const [deck] = useState(() => shuffle(symbols));
   const [flipped, setFlipped] = useState<number[]>([]);

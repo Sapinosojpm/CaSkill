@@ -151,3 +151,82 @@ export async function listCheatFlags() {
     },
   });
 }
+
+export async function suspendSubmissionGame(submissionId: string, reviewerId: string, notes: string) {
+  const submission = await prisma.gameSubmission.findUnique({
+    where: { id: submissionId },
+    include: { game: true },
+  });
+
+  if (!submission) {
+    throw new AppError("Submission not found", 404);
+  }
+
+  const reviewedAt = new Date();
+
+  const [updatedSubmission] = await prisma.$transaction([
+    prisma.gameSubmission.update({
+      where: { id: submissionId },
+      data: {
+        status: SubmissionStatus.REJECTED,
+        reviewerId,
+        reviewNotes: notes,
+        reviewedAt,
+      },
+      include: {
+        game: true,
+        creator: { select: { id: true, name: true, email: true } },
+        reviewer: { select: { id: true, name: true, email: true } },
+        reviews: { orderBy: { createdAt: "desc" } },
+      },
+    }),
+    prisma.review.create({
+      data: {
+        submissionId,
+        reviewerId,
+        decision: ReviewDecision.REJECTED,
+        notes,
+      },
+    }),
+    prisma.game.update({
+      where: { id: submission.gameId },
+      data: {
+        status: GameStatus.REJECTED,
+      },
+    }),
+  ]);
+
+  return updatedSubmission;
+}
+
+export async function deleteSubmissionGame(submissionId: string, reviewerId: string, notes: string) {
+  const submission = await prisma.gameSubmission.findUnique({
+    where: { id: submissionId },
+    include: { game: true },
+  });
+
+  if (!submission) {
+    throw new AppError("Submission not found", 404);
+  }
+
+  await prisma.$transaction([
+    prisma.review.create({
+      data: {
+        submissionId,
+        reviewerId,
+        decision: ReviewDecision.REJECTED,
+        notes: `[DELETE] ${notes}`,
+      },
+    }),
+    prisma.game.delete({
+      where: { id: submission.gameId },
+    }),
+  ]);
+
+  return {
+    success: true,
+    message: "Game and related submission data deleted",
+    deletedGameId: submission.gameId,
+    deletedSubmissionId: submissionId,
+  };
+}

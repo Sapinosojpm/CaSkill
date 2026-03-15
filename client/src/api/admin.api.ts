@@ -27,6 +27,24 @@ export async function rejectAdminSubmission(submissionId: string, notes: string)
   return response.data.submission;
 }
 
+export async function suspendAdminSubmissionGame(submissionId: string, notes: string) {
+  const response = await api.post<{ submission: CreatorSubmission }>(`/admin/submissions/${submissionId}/suspend`, { notes });
+  return response.data.submission;
+}
+
+export async function deleteAdminSubmissionGame(submissionId: string, notes: string) {
+  const response = await api.delete<{
+    success: boolean;
+    message: string;
+    deletedGameId: string;
+    deletedSubmissionId: string;
+  }>(`/admin/submissions/${submissionId}`, {
+    data: { notes },
+  });
+
+  return response.data;
+}
+
 export async function fetchCheatFlags() {
   const response = await api.get<{ cheatFlags: CheatFlagItem[] }>("/admin/cheat-flags");
   return response.data.cheatFlags;

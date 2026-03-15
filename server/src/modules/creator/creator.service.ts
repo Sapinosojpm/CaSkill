@@ -233,6 +233,9 @@ export async function uploadCreatorGame(input: UploadInput) {
     ),
   ]);
 
+  const extractedZip = new AdmZip(input.zipFile.buffer);
+  extractedZip.extractAllTo(submissionDir, true);
+
   const zipPublicUrl = toPublicUploadPath("packages", zipFilename);
   const thumbnailPublicUrl = toPublicUploadPath("thumbnails", thumbnailFilename);
 

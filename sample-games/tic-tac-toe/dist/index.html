@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tic Tac Toe Duel</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="hero">
+        <p class="eyebrow">CaSkill Sample Upload</p>
+        <h1>Tic Tac Toe Duel</h1>
+        <p class="subcopy">
+          A clean 1v1 browser game built with plain HTML, CSS, and JavaScript.
+        </p>
+      </section>
+
+      <section class="game-shell">
+        <div class="status-card">
+          <p class="label">Current turn</p>
+          <p id="turnLabel" class="value">Player X</p>
+        </div>
+
+        <div class="status-card">
+          <p class="label">Round result</p>
+          <p id="resultLabel" class="value">In progress</p>
+        </div>
+
+        <div class="status-card">
+          <p class="label">Scoreboard</p>
+          <p id="scoreLabel" class="value">X 0 - 0 O</p>
+        </div>
+
+        <div id="board" class="board" aria-label="Tic Tac Toe Board"></div>
+
+        <div class="controls">
+          <button id="resetRoundButton" class="button secondary" type="button">Reset Round</button>
+          <button id="resetMatchButton" class="button primary" type="button">Reset Match</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>

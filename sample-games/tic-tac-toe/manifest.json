@@ -1,0 +1,9 @@
+{
+  "title": "Tic Tac Toe Duel",
+  "version": "1.0.0",
+  "entryFile": "dist/index.html",
+  "description": "A simple 1v1 Tic-Tac-Toe game for two local players.",
+  "category": "Board Game",
+  "controls": "Player X and Player O take turns clicking empty squares.",
+  "scoringRules": "Win the round by completing three in a row. Faster wins and round victories determine the final score."
+}
