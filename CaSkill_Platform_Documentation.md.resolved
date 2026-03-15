@@ -1,0 +1,485 @@
+# CaSkill — Full Platform Documentation
+
+**Version:** 1.0 | **Status:** MVP In Development | **Last Updated:** March 2026
+
+---
+
+## 1. What Is CaSkill?
+
+CaSkill is a skill-based competitive gaming platform where two players go head-to-head in point-based challenges. Outcomes are determined entirely by skill — not luck. Players use purchased points to enter games like Chess, Quiz, or Push-ups, and the better player wins the prize pool.
+
+What makes CaSkill unique:
+
+🏆 Fair play — Multi-layer anti-cheat with liveness checks, eye-tracking, pose estimation, and background scan
+
+🎯 Point-based competition — Players buy points to join matches and compete for rewards
+
+🎮 User-Created Games — Anyone can create a custom game, and every time someone plays it, the creator earns 5%
+
+⚡ Real-time — Live match sync in under 100ms via WebSocket
+
+A slightly more polished version for a website:
+
+CaSkill is a skill-based competitive gaming platform where players compete head-to-head in point-based challenges. Every outcome is driven by skill, not luck. Users purchase points to join games like Chess, Quiz, or Push-ups, and the stronger player takes the win.
+
+What makes CaSkill unique:
+
+🏆 Fair competition — Advanced anti-cheat including liveness detection, eye-tracking, pose estimation, and background scanning
+
+🎯 Points, not gambling — Players buy points to participate in matches and challenges
+
+🎮 Creator economy — Users can build custom games and earn 5% whenever others play them
+
+⚡ Real-time gameplay — Ultra-fast live match synchronization via WebSocket
+
+## 2. Technology Stack (PERN)
+
+CaSkill MVP is a **web application** built on the **PERN stack**: PostgreSQL, Express, React, Node.js.
+
+```
+┌───────────────────────────────────────────┐
+│       React (Next.js) — Web Frontend      │
+│   Dashboard · Games · Wallet · Profile    │
+└───────────────┬───────────────────────────┘
+                │  REST API + WebSocket
+┌───────────────▼───────────────────────────┐
+│     Node.js + Express + TypeScript        │
+│   Auth · Match Engine · Escrow · Payout   │
+└───────────────┬───────────────────────────┘
+                │
+┌───────────────▼───────────────────────────┐
+│         PostgreSQL (via Supabase)          │
+│    Stripe (Payments) · S3 (Media)         │
+└───────────────────────────────────────────┘
+```
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| **P** — Database | PostgreSQL (Supabase) | Relational storage, real-time subscriptions |
+| **E** — Backend | Express + TypeScript | REST API, tRPC procedures, WebSocket server |
+| **R** — Frontend | React (Next.js) | Web app with SSR, file-based routing |
+| **N** — Runtime | Node.js 22 | Server runtime |
+| Styling | Tailwind CSS | Utility-first responsive design |
+| API Client | tRPC + TanStack Query | Type-safe client-server communication |
+| Auth | Supabase Auth | User sessions, JWT tokens |
+| Real-Time | Supabase Realtime (WebSocket) | Live match synchronization |
+| Payments | Stripe | Token deposits, withdrawals, webhooks |
+| Computer Vision | MediaPipe (via WebRTC/webcam) | Pose estimation, face/eye detection in browser |
+| Storage | S3 | Avatars, replays, game assets |
+| Deployment | Vercel (frontend) + Node server | Production hosting |
+| Testing | Vitest + Playwright | Unit, integration, and E2E tests |
+
+---
+
+## 3. Database Schema
+
+### `users`
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  phone VARCHAR(20),
+  display_name VARCHAR(100),
+  avatar_url VARCHAR(500),
+  kyc_verified BOOLEAN DEFAULT FALSE,
+  kyc_verified_at TIMESTAMP,
+  total_matches INT DEFAULT 0,
+  total_wins INT DEFAULT 0,
+  total_earnings DECIMAL(10,2) DEFAULT 0,
+  favorite_game VARCHAR(50),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### `wallets`
+```sql
+CREATE TABLE wallets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  balance DECIMAL(10,2) DEFAULT 0,
+  locked_balance DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+```
+
+### `custom_games` *(User-Created Games)*
+```sql
+CREATE TABLE custom_games (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  creator_id UUID NOT NULL REFERENCES users(id),
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  game_type VARCHAR(50) NOT NULL,        -- quiz | trivia | challenge | physical
+  rules JSONB NOT NULL,                   -- questions, scoring config, time limits
+  assets JSONB DEFAULT '[]',              -- images/media URLs on S3
+  category VARCHAR(100),                  -- sports, science, fitness, etc.
+  difficulty VARCHAR(50) DEFAULT 'medium',
+  min_bet DECIMAL(10,2) DEFAULT 5,
+  max_bet DECIMAL(10,2) DEFAULT 100,
+  is_published BOOLEAN DEFAULT FALSE,
+  is_approved BOOLEAN DEFAULT FALSE,      -- moderation gate
+  total_plays INT DEFAULT 0,
+  total_revenue DECIMAL(10,2) DEFAULT 0,  -- creator's 5% earnings
+  rating DECIMAL(3,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### `matches`
+```sql
+CREATE TABLE matches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_type VARCHAR(50) NOT NULL,         -- chess | quiz | pushups | custom
+  custom_game_id UUID REFERENCES custom_games(id),
+  difficulty VARCHAR(50) NOT NULL,
+  player1_id UUID NOT NULL REFERENCES users(id),
+  player2_id UUID REFERENCES users(id),
+  bet_amount DECIMAL(10,2) NOT NULL,
+  status VARCHAR(50) DEFAULT 'waiting',   -- waiting | active | completed | cancelled
+  winner_id UUID REFERENCES users(id),
+  player1_score INT,
+  player2_score INT,
+  duration_seconds INT,
+  anti_cheat_flags JSONB DEFAULT '[]',
+  created_at TIMESTAMP DEFAULT NOW(),
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP
+);
+```
+
+### `transactions`
+```sql
+CREATE TABLE transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  match_id UUID REFERENCES matches(id),
+  type VARCHAR(50) NOT NULL,              -- deposit | withdrawal | payout | fee | creator_royalty
+  amount DECIMAL(10,2) NOT NULL,
+  status VARCHAR(50) DEFAULT 'pending',   -- pending | completed | failed
+  stripe_transaction_id VARCHAR(255),
+  created_at TIMESTAMP DEFAULT NOW(),
+  completed_at TIMESTAMP
+);
+```
+
+### `anti_cheat_logs`
+```sql
+CREATE TABLE anti_cheat_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  match_id UUID NOT NULL REFERENCES matches(id),
+  user_id UUID NOT NULL REFERENCES users(id),
+  check_type VARCHAR(100),                -- liveness | eye_tracking | pose_estimation | background
+  result VARCHAR(50),                     -- pass | warning | fail
+  details JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### `game_ratings`
+```sql
+CREATE TABLE game_ratings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id UUID NOT NULL REFERENCES custom_games(id),
+  user_id UUID NOT NULL REFERENCES users(id),
+  rating INT CHECK (rating >= 1 AND rating <= 5),
+  review TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(game_id, user_id)
+);
+```
+
+---
+
+## 4. API Endpoints
+
+### Authentication
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/signup` | Register new user |
+| POST | `/api/auth/login` | Login |
+| POST | `/api/auth/logout` | Logout |
+| POST | `/api/auth/verify-email` | Email verification |
+| POST | `/api/auth/refresh` | Refresh JWT token |
+
+### Matches
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/matches/create` | Create a new challenge |
+| GET | `/api/matches/:id` | Get match details |
+| GET | `/api/matches/active` | Player's active matches |
+| POST | `/api/matches/:id/join` | Join an open challenge |
+| POST | `/api/matches/:id/move` | Submit move/answer |
+| POST | `/api/matches/:id/score` | Submit score (push-ups) |
+| POST | `/api/matches/:id/forfeit` | Forfeit match |
+| GET | `/api/matches/history` | Match history |
+
+### Wallet & Payments
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/wallet/balance` | Current balance |
+| POST | `/api/wallet/deposit` | Stripe token purchase |
+| POST | `/api/wallet/withdraw` | Withdrawal request |
+| GET | `/api/wallet/transactions` | Transaction history |
+| POST | `/api/wallet/stripe-webhook` | Stripe webhook |
+
+### User Profile
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/users/:id` | Get user profile |
+| PUT | `/api/users/:id` | Update profile |
+| POST | `/api/users/:id/kyc` | Submit KYC |
+| GET | `/api/users/:id/stats` | User statistics |
+
+### Custom Games
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/games/create` | Create a custom game |
+| PUT | `/api/games/:id` | Edit own game |
+| DELETE | `/api/games/:id` | Delete own game |
+| GET | `/api/games` | Browse published games |
+| GET | `/api/games/:id` | Game details |
+| GET | `/api/games/my-games` | Creator's games |
+| POST | `/api/games/:id/publish` | Submit for moderation |
+| GET | `/api/games/:id/stats` | Creator analytics |
+| POST | `/api/games/:id/rate` | Rate/review a game |
+| GET | `/api/games/top` | Top-rated / most-played |
+
+### Anti-Cheat
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/anticheat/liveness` | Liveness check |
+| POST | `/api/anticheat/eye-tracking` | Eye-tracking data |
+| POST | `/api/anticheat/pose` | Pose estimation data |
+| POST | `/api/anticheat/background` | Background verification |
+
+---
+
+## 5. Built-In Games
+
+### ♟️ Chess
+- Interactive board rendered in the browser (e.g., `react-chessboard` + `chess.js`)
+- Legal move validation with Stockfish WASM
+- Dual countdown timers synced via WebSocket
+- Move history sidebar
+- Eye-tracking via webcam + MediaPipe in browser
+- Resign button
+
+### 🧠 Quiz
+- 10 randomized multiple-choice questions
+- Per-question countdown timer
+- Progress bar ("Question 3 of 10")
+- Eye-tracking via webcam
+- Auto-advance after answer selection
+
+### 💪 Push-ups
+- Webcam feed via `getUserMedia()` / WebRTC
+- Real-time rep counter using MediaPipe Pose (WASM, runs in browser)
+- Opponent's rep count synced via WebSocket
+- Match countdown timer
+- Background verification (single user, no devices)
+- Random gesture liveness challenge
+
+---
+
+## 6. User-Created Games
+
+Any user can build a custom game and publish it. When others play it, the **creator earns 5% of every match pot**.
+
+### Revenue Split — Custom Games
+```
+Total Pot (e.g., €20 = €10 × 2 players)
+    ├── Winner:   85%  →  €17.00
+    ├── Platform: 10%  →  €2.00
+    └── Creator:   5%  →  €1.00
+```
+
+> Built-in games (Chess, Quiz, Push-ups) use 85% winner / 15% platform.
+
+### Creation Flow
+1. User opens "Create Game" page
+2. Fills template: title, description, category, game type, rules/questions, assets, difficulty, bet range
+3. Previews and tests the game
+4. Submits for moderation
+5. Moderator approves → game goes live in the marketplace
+6. Other users discover, play, and rate it
+7. Creator earns 5% royalties on every match automatically
+
+### Supported Game Types
+| Type | Description | Example |
+|---|---|---|
+| `quiz` | Multiple-choice Q&A | "Football Trivia" — 10 questions |
+| `trivia` | Speed knowledge round | "Science Speed Round" |
+| `challenge` | Task-based scoring | "Memory Match" — find pairs |
+| `physical` | Webcam-verified activity | "Plank Hold" — longest hold wins |
+
+### Game Template (JSON)
+```json
+{
+  "title": "Football Trivia",
+  "game_type": "quiz",
+  "category": "sports",
+  "difficulty": "medium",
+  "min_bet": 5,
+  "max_bet": 50,
+  "rules": {
+    "question_count": 10,
+    "time_per_question": 15,
+    "scoring": "correct_answer_1pt",
+    "tiebreaker": "speed",
+    "questions": [
+      {
+        "text": "Who won the 2022 FIFA World Cup?",
+        "options": ["Brazil", "France", "Argentina", "Germany"],
+        "correct": 2
+      }
+    ]
+  }
+}
+```
+
+### Creator Dashboard
+| Metric | Description |
+|---|---|
+| Total Plays | Times the game has been played |
+| Total Earnings | Cumulative 5% royalties |
+| Average Rating | 1–5 stars |
+| Recent Matches | Last 10 matches |
+| Weekly Trend | Play count over time |
+
+---
+
+## 7. Anti-Cheat System
+
+Anti-cheat runs **in the browser** using the user's webcam via WebRTC + MediaPipe WASM.
+
+| Layer | Method | Trigger |
+|---|---|---|
+| Liveness | Random gesture (blink, nod, smile) within 5s | Match start |
+| Eye-tracking | Gaze deviation >30° for >2s | Chess/Quiz — 3 warnings = forfeit |
+| Pose estimation | 33 landmarks, >20% displacement per rep | Push-ups/Physical |
+| Background | Color variance <10%, 1 human, no devices | All webcam games |
+
+All violations are logged server-side to `anti_cheat_logs`.
+
+---
+
+## 8. Payment & Escrow
+
+### Token Purchase
+```
+User selects amount (€5–€100)  →  Stripe Checkout  →  Webhook confirms  →  Tokens credited
+```
+
+### Escrow
+```
+Player creates challenge  →  Bet locked from wallet
+Opponent joins            →  Their bet locked too
+Match plays               →  Winner determined
+Payout:
+  • Built-in game:  85% winner / 15% platform
+  • Custom game:    85% winner / 10% platform / 5% creator
+```
+
+---
+
+## 9. Real-Time Sync
+
+Via **Supabase Realtime WebSocket**.
+
+| Event | Latency Target |
+|---|---|
+| `match:opponent_found` | <500ms |
+| `match:move` | <100ms |
+| `match:answer` | <100ms |
+| `match:score_update` | <200ms |
+| `match:completed` | <500ms |
+| `match:forfeited` | <500ms |
+
+---
+
+## 10. Web Pages
+
+| Page | Route | Purpose |
+|---|---|---|
+| Landing | `/` | Marketing page, signup CTA |
+| Login / Signup | `/auth` | Authentication |
+| Dashboard | `/dashboard` | Balance, active matches, recent results, quick actions |
+| Browse Challenges | `/browse` | Open challenges from other players |
+| Browse Games | `/games` | Custom game marketplace |
+| Create Challenge | `/challenge/new` | Pick game, set bet, confirm |
+| Create Game | `/games/new` | Build and submit a custom game |
+| Creator Dashboard | `/games/my-games` | Analytics for published games |
+| Waiting Room | `/match/:id/waiting` | Opponent matching, pre-match setup |
+| Game Screen | `/match/:id/play` | Live match (board / quiz / webcam) |
+| Result | `/match/:id/result` | Winner, payout, stats |
+| Wallet | `/wallet` | Balance, deposit, withdraw, history |
+| Profile | `/profile` | Stats, settings, KYC status |
+| Profile (public) | `/user/:id` | Public view of another player |
+
+---
+
+## 11. Security & Compliance
+
+| Area | Measure |
+|---|---|
+| Transit encryption | TLS 1.3 |
+| At-rest encryption | AES-256 |
+| Password hashing | bcrypt (12 rounds) |
+| Sessions | JWT, 24-hour expiry |
+| Payment data | PCI DSS via Stripe (zero card storage) |
+| KYC/AML | Email + phone verification |
+| Rate limiting | 100 req/min, 10 matches/hr, 5 payments/hr |
+| GDPR | Data deletion, consent management |
+| Fraud | Duplicate detection, betting patterns, 24hr withdrawal hold |
+| Game moderation | User-created games require approval before publishing |
+
+---
+
+## 12. Performance Targets
+
+| Metric | Target |
+|---|---|
+| Page load (LCP) | < 2 seconds |
+| Dashboard load | < 1 second |
+| Match creation | < 500ms |
+| Move/answer sync | < 100ms |
+| Webcam frame processing | < 50ms |
+| API p95 response | < 200ms |
+
+---
+
+## 13. Future Roadmap
+
+### 🔴 High Priority
+- **Leaderboards & Rankings** — Global + per-game, ELO skill rating, weekly resets
+- **Tournament Mode** — Bracket elimination, prize pools, scheduled starts
+- **Social Features** — Friends, private challenges, chat, post-match reactions
+
+### 🟡 Medium Priority
+- **Achievement Badges** — Milestones, profile display, bonus rewards
+- **Spectator Mode** — Live viewing of public matches
+- **Replay System** — Stored replays, social sharing, dispute review
+- **Notifications** — Email/browser push for match results, weekly digest
+- **Seasonal Events** — Limited-time modes, higher payouts, community goals
+- **Mobile App** — React Native port after web MVP is validated
+
+### 🟢 Lower Priority
+- **Streaming Integration** — Twitch/YouTube Live, highlight clips
+- **AI Features** — LLM quiz generation, post-match coaching, ML anomaly detection
+- **Corporate/Team Challenges** — B2B product, company tournaments
+- **Marketplace** — Cosmetics (avatar frames, themes, celebration effects)
+
+---
+
+## 14. Economics Summary
+
+| Scenario | Winner | Platform | Creator |
+|---|---|---|---|
+| **Built-in game** | 85% | 15% | — |
+| **User-created game** | 85% | 10% | 5% |
+| Token deposit | 100% credited | Stripe fees absorbed | — |
+| Withdrawal | Bank transfer | Processing fees | — |

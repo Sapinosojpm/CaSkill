@@ -21,16 +21,16 @@ const initialForm: WaitlistForm = {
 
 const highlights = [
   {
-    title: "Players first",
-    description: "Compete in browser-based skill games, climb ranked ladders, and enter live challenge drops.",
+    title: "Fair competition",
+    description: "Multi-layer anti-cheat combines liveness checks, eye-tracking, pose estimation, and background scanning.",
   },
   {
-    title: "Creator pipeline",
-    description: "Ship your own builds, submit them for review, and launch to a curated competitive catalog.",
+    title: "Points, not luck",
+    description: "Players purchase points to join matches, compete in challenges, and win through skill alone.",
   },
   {
-    title: "Fair play layer",
-    description: "Every run is built around reviewability, moderation workflows, and anti-cheat accountability.",
+    title: "Creator economy",
+    description: "Users can build custom games and earn 5% every time other players jump into their experiences.",
   },
 ];
 
@@ -55,8 +55,8 @@ function App() {
   const roleCopy = useMemo(
     () =>
       form.role === "CREATOR"
-        ? "You will be first in line for creator tooling, upload access, and submission reviews."
-        : "You will be first in line for game drops, ranked sessions, and player onboarding.",
+        ? "You will be first in line for creator tools, game publishing access, and 5% creator-earn onboarding."
+        : "You will be first in line for point-based matches, competitive game drops, and early player access.",
     [form.role],
   );
 
@@ -129,7 +129,7 @@ function App() {
             <div className="inline-flex items-center gap-3">
               <span className="h-px w-10 bg-[var(--color-success)]" />
               <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-[var(--color-success)] [font-family:var(--font-mono)]">
-                Skill-first browser competition
+                Skill-based point competition
               </span>
             </div>
 
@@ -137,15 +137,16 @@ function App() {
               <h1 className="[font-family:var(--font-bebas)] text-[4.4rem] uppercase leading-[0.86] tracking-[-0.02em] text-[var(--color-text)] sm:text-[5.8rem] xl:text-[7rem]">
                 Be early.
                 <br />
-                Play hard.
+                Play for points.
                 <br />
                 <span className="text-[var(--color-success)] drop-shadow-[0_0_48px_rgba(168,224,99,0.22)]">
-                  Launch ready.
+                  Win by skill.
                 </span>
               </h1>
               <p className="max-w-xl text-[1rem] leading-8 text-[rgba(240,239,232,0.58)]">
-                CA SKILL is building a competitive browser platform where players chase leaderboard runs and creators
-                ship original game builds into a moderated public catalog.
+                CaSkill is a skill-based competitive gaming platform where players go head-to-head in point-based
+                challenges. Users purchase points to enter games like Chess, Quiz, or Push-ups, and the stronger
+                player takes the win.
               </p>
             </div>
 
@@ -185,7 +186,7 @@ function App() {
                   {stats.total} waiting
                 </div>
                 <p className="max-w-[20rem] text-[1.8rem] leading-tight text-[var(--color-text)] [font-family:var(--font-bebas)]">
-                  Built for players who want fair competition and creators who want real audience.
+                  Built for players who want fair competition and creators who want a real earning model.
                 </p>
                 <div className="mt-8 grid grid-cols-3 gap-3">
                   <div className="rounded-[22px] border border-[rgba(255,255,255,0.06)] bg-black/20 p-4">
@@ -216,8 +217,8 @@ function App() {
                     Reserve your spot
                   </h2>
                   <p className="mt-2 max-w-sm text-sm leading-7 text-[var(--color-muted)]">
-                    Choose your lane and leave us a signal. Every signup is saved in your backend database, and the
-                    total queue count updates from the API.
+                    Join the early queue for point-based competition, custom games, and real-time matches. Every
+                    signup is saved in your backend database, and the live total updates from the API.
                   </p>
                 </div>
                 <div className="rounded-full border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] px-3 py-1 text-[10px] uppercase tracking-[0.28em] text-[var(--color-muted)]">
@@ -281,7 +282,7 @@ function App() {
                     className="min-h-32 w-full resize-y rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3.5 text-[var(--color-text)] outline-none transition focus:border-[var(--color-primary)]"
                     value={form.note}
                     onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))}
-                    placeholder="Memory games, creator uploads, tournaments, anti-cheat, leaderboards..."
+                    placeholder="Chess, quiz battles, push-up challenges, creator tools, anti-cheat, live matches..."
                   />
                 </label>
 
@@ -293,7 +294,7 @@ function App() {
                     onChange={(event) => setForm((current) => ({ ...current, wantsUpdates: event.target.checked }))}
                   />
                   <span className="text-sm leading-7 text-[var(--color-muted)]">
-                    Send me release updates, launch waves, and creator/player onboarding notices.
+                    Send me launch updates, new challenge drops, creator program news, and player onboarding notices.
                   </span>
                 </label>
 
