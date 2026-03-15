@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  PLAYER
+  CREATOR
+  ADMIN
+}
+
+enum GameStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  PUBLISHED
+}
+
+enum SubmissionStatus {
+  UPLOADED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum ReviewDecision {
+  APPROVED
+  REJECTED
+}
+
+enum ScoreStatus {
+  ACCEPTED
+  FLAGGED
+  REJECTED
+}
+
+enum CheatSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id                 String           @id @default(cuid())
+  name               String
+  email              String           @unique
+  passwordHash       String
+  role               UserRole
+  createdAt          DateTime         @default(now())
+  createdGames       Game[]           @relation("GameCreator")
+  submissions        GameSubmission[] @relation("SubmissionCreator")
+  reviewsGiven       Review[]
+  reviewedGames      GameSubmission[] @relation("SubmissionReviewer")
+  scores             Score[]
+  cheatFlags         CheatFlag[]
+  playSessions       PlaySession[]
+
+  @@index([role])
+}
+
+model WaitlistEntry {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  role         UserRole
+  note         String?
+  wantsUpdates Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([createdAt(sort: Desc)])
+  @@index([role])
+}
+
+model Game {
+  id                  String           @id @default(cuid())
+  title               String
+  description         String
+  thumbnailUrl        String
+  category            String
+  status              GameStatus       @default(DRAFT)
+  creatorId           String
+  version             String
+  entryFile           String
+  packagePath         String?
+  buildPath           String?
+  manifestData        Json
+  scoringRules        String?
+  controls            String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  creator             User             @relation("GameCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  submissions         GameSubmission[]
+  scores              Score[]
+  cheatFlags          CheatFlag[]
+  playSessions        PlaySession[]
+
+  @@index([status])
+  @@index([creatorId])
+  @@index([category])
+}
+
+model GameSubmission {
+  id             String           @id @default(cuid())
+  gameId         String
+  creatorId      String
+  zipFileUrl     String
+  manifestData   Json
+  status         SubmissionStatus @default(UPLOADED)
+  reviewerId     String?
+  reviewNotes    String?
+  submittedAt    DateTime         @default(now())
+  reviewedAt     DateTime?
+  game           Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  creator        User             @relation("SubmissionCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  reviewer       User?            @relation("SubmissionReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviews        Review[]
+
+  @@index([creatorId])
+  @@index([gameId])
+  @@index([status])
+}
+
+model Review {
+  id           String         @id @default(cuid())
+  submissionId String
+  reviewerId   String
+  decision     ReviewDecision
+  notes        String?
+  createdAt    DateTime       @default(now())
+  submission   GameSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  reviewer     User           @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([reviewerId])
+}
+
+model Score {
+  id                  String      @id @default(cuid())
+  userId              String
+  gameId              String
+  value               Int
+  durationSeconds     Int
+  status              ScoreStatus @default(ACCEPTED)
+  submittedAt         DateTime    @default(now())
+  sessionTokenSnapshot String?
+  payloadHash         String?
+  lookAwayCount       Int?
+  faceVisibleRatio    Float?
+  clientMeta          Json?
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game                Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  cheatFlags          CheatFlag[]
+
+  @@index([gameId, status, value(sort: Desc)])
+  @@index([userId])
+}
+
+model CheatFlag {
+  id         String        @id @default(cuid())
+  scoreId     String
+  userId      String
+  gameId      String
+  reason      String
+  severity    CheatSeverity
+  createdAt   DateTime      @default(now())
+  score       Score         @relation(fields: [scoreId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game        Game          @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([scoreId])
+  @@index([userId])
+  @@index([gameId])
+  @@index([severity])
+}
+
+model PlaySession {
+  id              String    @id @default(cuid())
+  userId          String
+  gameId          String
+  sessionToken    String    @unique
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  expectedMaxScore Int?
+  minDurationSeconds Int?
+  lookAwayEvents  Int       @default(0)
+  faceDetectedRatio Float?
+  meta            Json?
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game            Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([gameId])
+  @@index([startedAt])
+}
