@@ -7,6 +7,8 @@ import { SubmissionReviewListPage } from "./admin/SubmissionReviewListPage";
 import { LoginPage } from "./auth/LoginPage";
 import { RegisterPage } from "./auth/RegisterPage";
 import { CreatorDashboardPage } from "./creator/CreatorDashboardPage";
+import { CreatorGuidePage } from "./creator/CreatorGuidePage";
+import { CreatorIdePage } from "./creator/CreatorIdePage";
 import { CreatorSubmissionDetailPage } from "./creator/CreatorSubmissionDetailPage";
 import { MySubmissionsPage } from "./creator/MySubmissionsPage";
 import { UploadGamePage } from "./creator/UploadGamePage";
@@ -53,6 +55,22 @@ export function AppRoutes() {
           element={
             <RequireRole allowedRoles={["CREATOR", "ADMIN"]}>
               <CreatorDashboardPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/creator/guide"
+          element={
+            <RequireRole allowedRoles={["CREATOR", "ADMIN"]}>
+              <CreatorGuidePage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/creator/ide"
+          element={
+            <RequireRole allowedRoles={["CREATOR", "ADMIN"]}>
+              <CreatorIdePage />
             </RequireRole>
           }
         />

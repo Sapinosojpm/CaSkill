@@ -8,7 +8,9 @@ const publicLinks = [
 ];
 
 const creatorLinks = [
-  { to: "/creator", label: "Creator" },
+  { to: "/creator", label: "Dashboard" },
+  { to: "/creator/guide", label: "Guide" },
+  { to: "/creator/ide", label: "Sandbox" },
   { to: "/creator/upload", label: "Upload" },
   { to: "/creator/submissions", label: "Submissions" },
 ];
@@ -88,7 +90,7 @@ export function AppShell() {
                 <ButtonLink size="sm" to="/login" tone="ghost">
                   Login
                 </ButtonLink>
-                <ButtonLink className="!text-black" size="sm" to="/register">
+                <ButtonLink size="sm" to="/register">
                   Join Now
                 </ButtonLink>
               </>

@@ -34,9 +34,17 @@ export function CreatorDashboardPage() {
         title="Manage uploads and track review status."
         description="This creator dashboard shell is ready for the upload flow, manifest parsing, submission history, and review state badges."
         actions={
-          <ButtonLink to="/creator/upload">
-            Upload Game
-          </ButtonLink>
+          <div className="flex flex-wrap gap-3">
+            <ButtonLink to="/creator/guide" tone="ghost">
+              Guide
+            </ButtonLink>
+            <ButtonLink to="/creator/ide" tone="ghost">
+              Open Sandbox
+            </ButtonLink>
+            <ButtonLink to="/creator/upload">
+              Upload ZIP
+            </ButtonLink>
+          </div>
         }
       />
       {error ? <p className="text-sm text-[var(--color-error)]">{error}</p> : null}

@@ -3,10 +3,10 @@ import clsx from "clsx";
 type StatusTone = "primary" | "success" | "warning" | "error" | "muted";
 
 const toneClassMap: Record<StatusTone, string> = {
-  primary: "border-[rgba(232,255,71,0.25)] bg-[rgba(232,255,71,0.08)] text-[var(--color-primary)]",
-  success: "border-[rgba(168,224,99,0.24)] bg-[rgba(168,224,99,0.08)] text-[var(--color-success)]",
-  warning: "border-[rgba(255,159,67,0.24)] bg-[rgba(255,159,67,0.08)] text-[var(--color-warning)]",
-  error: "border-[rgba(255,77,77,0.24)] bg-[rgba(255,77,77,0.08)] text-[var(--color-error)]",
+  primary: "border-[var(--color-primary)]/30 bg-[var(--color-primary)] !text-black shadow-[0_4px_12px_rgba(232,255,71,0.1)]",
+  success: "border-[var(--color-success)]/30 bg-[var(--color-success)]/15 text-[var(--color-success)]",
+  warning: "border-[var(--color-warning)]/30 bg-[var(--color-warning)] !text-black shadow-[0_4px_12px_rgba(255,159,67,0.1)]",
+  error: "border-[var(--color-error)]/30 bg-[var(--color-error)]/15 text-[var(--color-error)]",
   muted: "border-[var(--color-border)] bg-[var(--color-surface-strong)] text-[var(--color-muted)]",
 };
 

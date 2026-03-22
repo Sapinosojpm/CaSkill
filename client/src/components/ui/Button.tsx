@@ -7,13 +7,13 @@ type ButtonSize = "sm" | "md" | "lg";
 
 const toneClassMap: Record<ButtonTone, string> = {
   primary:
-    "border border-[rgba(232,255,71,0.55)] bg-[var(--color-primary)] text-black shadow-[0_0_32px_rgba(232,255,71,0.16)] hover:brightness-[1.03]",
+    "border border-[rgba(232,255,71,0.55)] bg-[var(--color-primary)] !text-black shadow-[0_0_32px_rgba(232,255,71,0.16)] hover:brightness-[1.03]",
   ghost:
     "border border-[rgba(255,255,255,0.08)] bg-transparent text-[var(--color-text)] hover:border-[rgba(232,255,71,0.25)] hover:text-[var(--color-primary)]",
   danger:
     "border border-[rgba(255,77,77,0.35)] bg-[var(--color-error)] text-white hover:brightness-[1.02]",
   success:
-    "border border-[rgba(168,224,99,0.35)] bg-[var(--color-success)] text-black hover:brightness-[1.02]",
+    "border border-[rgba(168,224,99,0.35)] bg-[var(--color-success)] !text-black hover:brightness-[1.02]",
 };
 
 const sizeClassMap: Record<ButtonSize, string> = {
