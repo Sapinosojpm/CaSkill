@@ -11,6 +11,7 @@ import {
   rejectAdminSubmission,
   suspendAdminSubmissionGame,
 } from "../../api/admin.api";
+import { API_BASE_URL } from "../../api/api";
 import type { CreatorSubmission } from "../../api/creator.types";
 
 export function SubmissionReviewDetailPage() {
@@ -98,13 +99,31 @@ export function SubmissionReviewDetailPage() {
       <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
         <SectionCard title="Preview area" description="Uploaded game preview will render here in the review phase.">
           {submission ? (
-            <div className="space-y-3 text-sm text-[var(--color-muted)]">
-              <p>Game: <span className="text-[var(--color-text)]">{submission.game.title}</span></p>
-              <p>Creator: <span className="text-[var(--color-text)]">{submission.creator?.name ?? submission.creatorId}</span></p>
-              <p>Game status: <span className="text-[var(--color-text)]">{submission.game.status}</span></p>
-              <p>ZIP: <span className="text-[var(--color-text)]">{submission.zipFileUrl}</span></p>
-              <p>Entry file: <span className="text-[var(--color-text)]">{String(submission.manifestData.entryFile ?? "n/a")}</span></p>
-              <p>Preview path: <span className="text-[var(--color-text)]">{submission.game.buildPath ?? "Not extracted in MVP"}</span></p>
+            <div className="space-y-4">
+              <div className="space-y-2 text-sm text-[var(--color-muted)]">
+                <p>Game: <span className="text-[var(--color-text)]">{submission.game.title}</span></p>
+                <p>Creator: <span className="text-[var(--color-text)]">{submission.creator?.name ?? submission.creatorId}</span></p>
+                <p>Game status: <span className="text-[var(--color-text)]">{submission.game.status}</span></p>
+                <p>ZIP: <span className="text-[var(--color-text)]">{submission.zipFileUrl}</span></p>
+                <p>Entry file: <span className="text-[var(--color-text)]">{String(submission.manifestData.entryFile ?? "n/a")}</span></p>
+                <p>Preview path: <span className="text-[var(--color-text)]">{submission.game.buildPath ?? "Not extracted in MVP"}</span></p>
+              </div>
+              {submission.game.buildPath && submission.manifestData.entryFile ? (
+                <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white mt-4">
+                  <div className="flex items-center gap-2 border-b bg-gray-100 px-4 py-2">
+                    <div className="h-3 w-3 rounded-full bg-red-400"></div>
+                    <div className="h-3 w-3 rounded-full bg-yellow-400"></div>
+                    <div className="h-3 w-3 rounded-full bg-green-400"></div>
+                    <span className="ml-2 text-xs font-semibold text-gray-500 uppercase tracking-widest">Live build preview</span>
+                  </div>
+                  <iframe
+                    className="min-h-[500px] w-full border-none"
+                    src={`${new URL(API_BASE_URL).origin}${submission.game.buildPath}/${String(submission.manifestData.entryFile).replace(/^\.?\//, "").replace(/^(dist|build)\//, "")}`}
+                    title="Admin Preview"
+                    sandbox="allow-scripts allow-same-origin"
+                  />
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="flex min-h-[280px] items-center justify-center rounded-3xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-strong)] text-[var(--color-muted)]">
