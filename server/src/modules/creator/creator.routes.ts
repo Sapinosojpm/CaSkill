@@ -8,6 +8,7 @@ import {
   listCreatorSubmissionsHandler,
   submitCreatorSubmissionHandler,
   uploadCreatorGameHandler,
+  deleteCreatorSubmissionHandler,
 } from "./creator.controller.js";
 import { submitSubmissionSchema } from "./creator.schema.js";
 import { creatorUploadMiddleware } from "./creator.upload.js";
@@ -21,3 +22,4 @@ creatorRouter.post("/games/upload", creatorUploadMiddleware, uploadCreatorGameHa
 creatorRouter.post("/games/submit", validateBody(submitSubmissionSchema), submitCreatorSubmissionHandler);
 creatorRouter.get("/submissions", listCreatorSubmissionsHandler);
 creatorRouter.get("/submissions/:id", getCreatorSubmissionHandler);
+creatorRouter.delete("/submissions/:id", deleteCreatorSubmissionHandler);

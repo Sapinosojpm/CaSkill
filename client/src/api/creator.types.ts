@@ -11,6 +11,7 @@ export type CreatorGameSummary = {
   status: string;
   version?: string;
   thumbnailUrl?: string;
+  bannerUrl?: string | null;
   buildPath?: string | null;
 };
 

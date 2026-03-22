@@ -15,6 +15,7 @@ export function UploadGamePage() {
     version: "",
   });
   const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [banner, setBanner] = useState<File | null>(null);
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,6 +36,7 @@ export function UploadGamePage() {
       const uploadResult = await uploadCreatorGame({
         ...form,
         thumbnail,
+        banner,
         zipFile,
       });
       setResult(uploadResult);
@@ -92,9 +94,9 @@ export function UploadGamePage() {
               required
             />
           </label>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <label className="block">
-              <span className="mb-2 block text-sm text-[var(--color-muted)]">Thumbnail image</span>
+              <span className="mb-2 block text-sm text-[var(--color-muted)]">Thumbnail icon (Square)</span>
               <input
                 className="block w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3"
                 type="file"
@@ -104,7 +106,16 @@ export function UploadGamePage() {
               />
             </label>
             <label className="block">
-              <span className="mb-2 block text-sm text-[var(--color-muted)]">ZIP package</span>
+              <span className="mb-2 block text-sm text-[var(--color-muted)]">Banner art (Optional)</span>
+              <input
+                className="block w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3"
+                type="file"
+                accept="image/*"
+                onChange={(event) => setBanner(event.target.files?.[0] ?? null)}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm text-[var(--color-muted)]">ZIP package (.zip)</span>
               <input
                 className="block w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3"
                 type="file"

@@ -27,6 +27,26 @@ async function generateDummyThumbnail(): Promise<File> {
   });
 }
 
+async function generateDummyBanner(): Promise<File> {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 600;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#0A0A08";
+  ctx.fillRect(0, 0, 1200, 600);
+  ctx.fillStyle = "#e8ff47";
+  ctx.font = "bold 80px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("IDE Banner", 600, 300);
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      resolve(new File([blob!], "banner.png", { type: "image/png" }));
+    });
+  });
+}
+
 type FileKey = "html" | "css" | "javascript";
 
 export function CreatorIdePage() {
@@ -41,6 +61,9 @@ export function CreatorIdePage() {
     category: "Arcade",
     version: "1.0.0"
   });
+  
+  const [thumbnailInput, setThumbnailInput] = useState<File | null>(null);
+  const [bannerInput, setBannerInput] = useState<File | null>(null);
   
   const [files, setFiles] = useState({
     html: `<!-- HTML Entry -->
@@ -295,7 +318,8 @@ ${files.html}
       
       const zipBlob = await zip.generateAsync({ type: "blob" });
       const zipFile = new File([zipBlob], "game-package.zip", { type: "application/zip" });
-      const thumbnailFile = await generateDummyThumbnail();
+      const thumbnailFile = thumbnailInput ?? await generateDummyThumbnail();
+      const bannerFile = bannerInput ?? await generateDummyBanner();
       
       const result = await uploadCreatorGame({
         title: form.title,
@@ -303,6 +327,7 @@ ${files.html}
         category: form.category,
         version: form.version,
         thumbnail: thumbnailFile,
+        banner: bannerFile,
         zipFile: zipFile,
       });
       
@@ -392,19 +417,39 @@ ${files.html}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[32px] border border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(17,17,16,0.98),rgba(10,10,8,0.98))] p-8 shadow-[0_24px_64px_rgba(0,0,0,0.4)]">
+          <div className="w-full max-w-xl rounded-[32px] border border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(17,17,16,0.98),rgba(10,10,8,0.98))] p-8 shadow-[0_24px_64px_rgba(0,0,0,0.4)]">
             <h3 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">Publish Game</h3>
             <p className="mt-2 text-sm text-[var(--color-muted)]">Set a title and category to upload this Sandbox IDE project directly to the admin moderation queue.</p>
             
             <div className="mt-6 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-sm text-[var(--color-muted)]">Title</span>
+                  <input
+                    className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]/50"
+                    value={form.title}
+                    onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm text-[var(--color-muted)]">Version</span>
+                  <input
+                    className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]/50"
+                    value={form.version}
+                    onChange={(e) => setForm(f => ({ ...f, version: e.target.value }))}
+                  />
+                </label>
+              </div>
+
               <label className="block">
-                <span className="mb-2 block text-sm text-[var(--color-muted)]">Title</span>
-                <input
-                  className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]/50"
-                  value={form.title}
-                  onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
+                <span className="mb-2 block text-sm text-[var(--color-muted)]">Description</span>
+                <textarea
+                  className="min-h-20 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]/50"
+                  value={form.description}
+                  onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
                 />
               </label>
+
               <label className="block">
                 <span className="mb-2 block text-sm text-[var(--color-muted)]">Category</span>
                 <input
@@ -413,6 +458,27 @@ ${files.html}
                   onChange={(e) => setForm(f => ({ ...f, category: e.target.value }))}
                 />
               </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-sm text-[var(--color-muted)]">Thumbnail (Square)</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="block w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-[11px] text-[var(--color-muted)] file:mr-2 file:rounded-full file:border-0 file:bg-[var(--color-primary)] file:px-3 file:py-1 file:text-[11px] file:font-bold file:text-black hover:file:opacity-90 cursor-pointer"
+                    onChange={(e) => setThumbnailInput(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm text-[var(--color-muted)]">Banner (Format: 16:9)</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="block w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-strong)] px-4 py-3 text-[11px] text-[var(--color-muted)] file:mr-2 file:rounded-full file:border-0 file:bg-[var(--color-border)] file:text-[var(--color-text)] file:px-3 file:py-1 file:text-[11px] file:font-semibold hover:file:bg-[rgba(255,255,255,0.1)] cursor-pointer"
+                    onChange={(e) => setBannerInput(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+              </div>
             </div>
 
             {publishError && <p className="mt-4 text-sm text-[var(--color-error)]">{publishError}</p>}

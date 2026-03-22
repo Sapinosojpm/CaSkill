@@ -150,29 +150,27 @@ export function StorePage() {
                 <div
                   key={item.id}
                   className={[
-                    "rounded-[28px] border p-5 transition",
+                    "flex flex-col h-full rounded-[28px] border p-5 transition",
                     isFeatured
                       ? "border-[rgba(232,255,71,0.35)] bg-[linear-gradient(180deg,rgba(232,255,71,0.10),rgba(17,17,16,0.96))]"
                       : "border-[var(--color-border)] bg-[var(--color-surface-strong)]",
                   ].join(" ")}
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-lg font-black text-[var(--color-text)]">{item.name}</h3>
-                      {isFeatured ? <StatusBadge label="Best value" tone="primary" /> : null}
-                    </div>
-                    <p className="text-4xl font-black text-[var(--color-success)]">{item.pointsAmount}</p>
-                    <p className="text-sm text-[var(--color-muted)]">{item.description ?? "Instantly added to your CaSkill wallet after Stripe confirms payment."}</p>
-                    <p className="text-sm font-semibold text-[var(--color-text)]">{formatPrice(item.priceCents, item.currency)}</p>
-                    <button
-                      className="inline-flex rounded-full border border-[rgba(232,255,71,0.45)] bg-[var(--color-primary)] px-5 py-3 text-sm font-black uppercase tracking-[0.2em] text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={Boolean(activePackageId) || isPending}
-                      onClick={() => void handleCheckout(item.id)}
-                      type="button"
-                    >
-                      {isLoading ? "Redirecting..." : "Buy with Stripe"}
-                    </button>
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <h3 className="text-lg font-black text-[var(--color-text)]">{item.name}</h3>
+                    {isFeatured ? <StatusBadge label="Best value" tone="primary" /> : null}
                   </div>
+                  <p className="text-4xl font-black text-[var(--color-success)] mb-3">{item.pointsAmount}</p>
+                  <p className="text-sm text-[var(--color-muted)] mb-3 flex-1">{item.description ?? "Instantly added to your CaSkill wallet after Stripe confirms payment."}</p>
+                  <p className="text-sm font-semibold text-[var(--color-text)] mb-4">{formatPrice(item.priceCents, item.currency)}</p>
+                  <button
+                    className="mt-auto inline-flex items-center justify-center rounded-full border border-[rgba(232,255,71,0.45)] bg-[var(--color-primary)] px-5 py-3 text-sm font-black uppercase tracking-[0.2em] text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={Boolean(activePackageId) || isPending}
+                    onClick={() => void handleCheckout(item.id)}
+                    type="button"
+                  >
+                    {isLoading ? "Redirecting..." : "Buy with Stripe"}
+                  </button>
                 </div>
               );
             })}

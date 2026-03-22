@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import AdmZip from "adm-zip";
+import { put } from "@vercel/blob";
 import { prisma } from "../../config/prisma.js";
 import { AppError } from "../../utils/app-error.js";
 import { ensureDir, toPublicUploadPath, uploadRoot } from "../../utils/file-system.js";
@@ -26,6 +27,7 @@ type UploadInput = {
   category: string;
   version: string;
   thumbnailFile: Express.Multer.File;
+  bannerFile?: Express.Multer.File;
   zipFile: Express.Multer.File;
 };
 
@@ -221,11 +223,44 @@ export async function uploadCreatorGame(input: UploadInput) {
   await ensureDir(submissionDir);
 
   const zipAbsolutePath = path.join(uploadRoot, "packages", zipFilename);
-  const thumbnailAbsolutePath = path.join(uploadRoot, "thumbnails", thumbnailFilename);
+
+  let thumbnailPublicUrl = "";
+  let bannerPublicUrl: string | null = null;
+
+  try {
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const thumbnailBlob = await put(`thumbnails/${thumbnailFilename}`, input.thumbnailFile.buffer, {
+        access: "public",
+      });
+      thumbnailPublicUrl = thumbnailBlob.url;
+
+      if (input.bannerFile) {
+        const bannerExtension = path.extname(input.bannerFile.originalname) || ".png";
+        const bannerFilename = `${submissionSlug}-${suffix}-banner${bannerExtension}`;
+        const bannerBlob = await put(`banners/${bannerFilename}`, input.bannerFile.buffer, {
+          access: "public",
+        });
+        bannerPublicUrl = bannerBlob.url;
+      }
+    } else {
+      throw new Error("Missing BLOB_READ_WRITE_TOKEN, falling back to local.");
+    }
+  } catch (error) {
+    const thumbnailAbsolutePath = path.join(uploadRoot, "thumbnails", thumbnailFilename);
+    await writeFile(thumbnailAbsolutePath, input.thumbnailFile.buffer);
+    thumbnailPublicUrl = toPublicUploadPath("thumbnails", thumbnailFilename);
+
+    if (input.bannerFile) {
+      const bannerExtension = path.extname(input.bannerFile.originalname) || ".png";
+      const bannerFilename = `${submissionSlug}-${suffix}-banner${bannerExtension}`;
+      const bannerAbsolutePath = path.join(uploadRoot, "thumbnails", bannerFilename);
+      await writeFile(bannerAbsolutePath, input.bannerFile.buffer);
+      bannerPublicUrl = toPublicUploadPath("thumbnails", bannerFilename);
+    }
+  }
 
   await Promise.all([
     writeFile(zipAbsolutePath, input.zipFile.buffer),
-    writeFile(thumbnailAbsolutePath, input.thumbnailFile.buffer),
     fs.writeFile(
       path.join(submissionDir, "manifest.json"),
       JSON.stringify(manifest, null, 2),
@@ -237,7 +272,6 @@ export async function uploadCreatorGame(input: UploadInput) {
   extractedZip.extractAllTo(submissionDir, true);
 
   const zipPublicUrl = toPublicUploadPath("packages", zipFilename);
-  const thumbnailPublicUrl = toPublicUploadPath("thumbnails", thumbnailFilename);
 
   const updatedSubmission = await prisma.gameSubmission.update({
     where: { id: submission.id },
@@ -253,6 +287,7 @@ export async function uploadCreatorGame(input: UploadInput) {
     where: { id: game.id },
     data: {
       thumbnailUrl: thumbnailPublicUrl,
+      bannerUrl: bannerPublicUrl,
       packagePath: zipPublicUrl,
       buildPath: toPublicUploadPath("submissions", submission.id, buildRoot),
       manifestData: manifest,
@@ -355,4 +390,23 @@ export async function getCreatorSubmissionById(creatorId: string, submissionId: 
   }
 
   return submission;
+}
+
+export async function deleteCreatorSubmission(creatorId: string, submissionId: string) {
+  const submission = await prisma.gameSubmission.findFirst({
+    where: { id: submissionId, creatorId },
+    include: { game: true },
+  });
+
+  if (!submission) {
+    throw new AppError("Submission not found", 404);
+  }
+
+  await prisma.$transaction([
+    prisma.review.deleteMany({ where: { submissionId } }),
+    prisma.gameSubmission.delete({ where: { id: submissionId } }),
+    prisma.game.delete({ where: { id: submission.gameId } }),
+  ]);
+
+  return { success: true };
 }

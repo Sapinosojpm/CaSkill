@@ -108,6 +108,7 @@ model Game {
   title               String
   description         String
   thumbnailUrl        String
+  bannerUrl           String?
   category            String
   status              GameStatus       @default(DRAFT)
   creatorId           String

@@ -12,6 +12,7 @@ export async function uploadCreatorGame(input: {
   category: string;
   version: string;
   thumbnail: File;
+  banner?: File | null;
   zipFile: File;
 }) {
   const formData = new FormData();
@@ -20,6 +21,9 @@ export async function uploadCreatorGame(input: {
   formData.append("category", input.category);
   formData.append("version", input.version);
   formData.append("thumbnail", input.thumbnail);
+  if (input.banner) {
+    formData.append("banner", input.banner);
+  }
   formData.append("zipFile", input.zipFile);
 
   const response = await api.post<UploadCreatorGameResponse>("/creator/games/upload", formData, {
@@ -47,6 +51,11 @@ export async function submitCreatorSubmission(submissionId: string) {
   });
 
   return response.data.submission;
+}
+
+export async function deleteCreatorSubmission(submissionId: string) {
+  const response = await api.delete<{ success: boolean }>(`/creator/submissions/${submissionId}`);
+  return response.data;
 }
 
 

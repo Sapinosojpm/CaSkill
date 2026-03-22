@@ -7,6 +7,7 @@ import {
   listCreatorSubmissions,
   submitCreatorSubmission,
   uploadCreatorGame,
+  deleteCreatorSubmission,
 } from "./creator.service.js";
 
 function getUploadFiles(req: Request) {
@@ -14,11 +15,13 @@ function getUploadFiles(req: Request) {
     | {
         zipFile?: Express.Multer.File[];
         thumbnail?: Express.Multer.File[];
+        banner?: Express.Multer.File[];
       }
     | undefined;
 
   const zipFile = files?.zipFile?.[0];
   const thumbnailFile = files?.thumbnail?.[0];
+  const bannerFile = files?.banner?.[0];
 
   if (!zipFile || !thumbnailFile) {
     throw new AppError("Both ZIP package and thumbnail are required", 400);
@@ -27,6 +30,7 @@ function getUploadFiles(req: Request) {
   return {
     zipFile,
     thumbnailFile,
+    bannerFile,
   };
 }
 
@@ -36,7 +40,7 @@ export const getCreatorDashboardHandler = asyncHandler(async (req: Request, res:
 });
 
 export const uploadCreatorGameHandler = asyncHandler(async (req: Request, res: Response) => {
-  const { zipFile, thumbnailFile } = getUploadFiles(req);
+  const { zipFile, thumbnailFile, bannerFile } = getUploadFiles(req);
 
   const result = await uploadCreatorGame({
     creatorId: req.user!.id,
@@ -45,6 +49,7 @@ export const uploadCreatorGameHandler = asyncHandler(async (req: Request, res: R
     category: String(req.body.category ?? "").trim(),
     version: String(req.body.version ?? "").trim(),
     thumbnailFile,
+    bannerFile,
     zipFile,
   });
 
@@ -65,4 +70,10 @@ export const getCreatorSubmissionHandler = asyncHandler(async (req: Request, res
   const submissionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const submission = await getCreatorSubmissionById(req.user!.id, submissionId);
   res.status(200).json({ submission });
+});
+
+export const deleteCreatorSubmissionHandler = asyncHandler(async (req: Request, res: Response) => {
+  const submissionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const result = await deleteCreatorSubmission(req.user!.id, submissionId);
+  res.status(200).json(result);
 });

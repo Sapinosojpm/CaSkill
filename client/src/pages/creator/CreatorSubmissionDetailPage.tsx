@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { PageHero } from "../../components/ui/PageHero";
 import { SectionCard } from "../../components/ui/SectionCard";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { getApiErrorMessage } from "../../utils/errors";
-import { fetchCreatorSubmission, submitCreatorSubmission } from "../../api/creator.api";
+import { fetchCreatorSubmission, submitCreatorSubmission, deleteCreatorSubmission } from "../../api/creator.api";
 import type { CreatorSubmission } from "../../api/creator.types";
 
 export function CreatorSubmissionDetailPage() {
   const { submissionId } = useParams();
+  const navigate = useNavigate();
   const [submission, setSubmission] = useState<CreatorSubmission | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +48,22 @@ export function CreatorSubmissionDetailPage() {
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, "Unable to submit for review"));
     } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!submission) return;
+    const confirmed = window.confirm("Are you sure you want to permanently delete this game? This action cannot be undone.");
+    if (!confirmed) return;
+
+    setError("");
+    setIsSubmitting(true);
+    try {
+      await deleteCreatorSubmission(submission.id);
+      navigate("/creator/submissions");
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "Unable to delete submission"));
       setIsSubmitting(false);
     }
   }
@@ -93,11 +110,16 @@ export function CreatorSubmissionDetailPage() {
               <p className="text-sm text-[var(--color-muted)]">
                 Reviewed at: <span className="text-[var(--color-text)]">{submission.reviewedAt ? new Date(submission.reviewedAt).toLocaleString() : "Not reviewed yet"}</span>
               </p>
-              {submission.status === "UPLOADED" ? (
-                <Button className="rounded-2xl" disabled={isSubmitting} onClick={handleSendForReview} type="button">
-                  {isSubmitting ? "Submitting..." : "Send for Review"}
+              <div className="flex flex-wrap gap-3 mt-4">
+                {submission.status === "UPLOADED" || submission.status === "REJECTED" ? (
+                  <Button className="rounded-2xl !text-black" disabled={isSubmitting} onClick={handleSendForReview} type="button">
+                    {isSubmitting ? "Submitting..." : "Send for Review"}
+                  </Button>
+                ) : null}
+                <Button className="rounded-2xl hover:bg-red-600/20" tone="danger" disabled={isSubmitting} onClick={handleDelete} type="button">
+                  Delete Game
                 </Button>
-              ) : null}
+              </div>
             </div>
           ) : (
             <p className="text-sm text-[var(--color-muted)]">Loading review data...</p>

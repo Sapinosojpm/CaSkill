@@ -28,4 +28,5 @@ const upload = multer({
 export const creatorUploadMiddleware = upload.fields([
   { name: "zipFile", maxCount: 1 },
   { name: "thumbnail", maxCount: 1 },
+  { name: "banner", maxCount: 1 },
 ]);
