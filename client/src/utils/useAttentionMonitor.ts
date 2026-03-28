@@ -81,13 +81,18 @@ export function useAttentionMonitor(active: boolean) {
 
         setState((current) => ({ ...current, isReady: true, isRunning: true }));
 
+        let lastStateUpdate = 0;
+
         const tick = () => {
           if (!videoRef.current) {
             return;
           }
 
-          const result = faceLandmarker.detectForVideo(videoRef.current, performance.now()) as FaceLandmarkerResult;
+          const now = performance.now();
+          const result = faceLandmarker.detectForVideo(videoRef.current, now) as FaceLandmarkerResult;
           checksRef.current.total += 1;
+
+          let currentWarning = "";
 
           if (result.faceLandmarks?.length) {
             checksRef.current.visible += 1;
@@ -101,33 +106,33 @@ export function useAttentionMonitor(active: boolean) {
 
             if (offset > 0.06) {
               checksRef.current.lookAway += 1;
-              setState((current) => ({
-                ...current,
-                lastWarning: "Head rotation suggests the player is looking away.",
-              }));
+              currentWarning = "Head rotation suggests the player is looking away.";
             }
           } else {
             checksRef.current.lookAway += 1;
-            setState((current) => ({
-              ...current,
-              lastWarning: "Face not detected in frame.",
-            }));
+            currentWarning = "Face not detected in frame.";
           }
 
-          setState((current) => ({
-            ...current,
-            lookAwayCount: checksRef.current.lookAway,
-            faceVisibleRatio:
-              checksRef.current.total > 0
-                ? checksRef.current.visible / checksRef.current.total
-                : current.faceVisibleRatio,
-          }));
+          // Only update state every 500ms to prevent per-frame re-renders
+          if (now - lastStateUpdate > 500) {
+            lastStateUpdate = now;
+            setState((current) => ({
+              ...current,
+              lookAwayCount: checksRef.current.lookAway,
+              lastWarning: currentWarning || current.lastWarning,
+              faceVisibleRatio:
+                checksRef.current.total > 0
+                  ? checksRef.current.visible / checksRef.current.total
+                  : current.faceVisibleRatio,
+            }));
+          }
 
           animationFrameRef.current = window.requestAnimationFrame(tick);
         };
 
         animationFrameRef.current = window.requestAnimationFrame(tick);
-      } catch {
+      } catch (err) {
+        console.error("Monitor error:", err);
         setState((current) => ({
           ...current,
           isReady: false,

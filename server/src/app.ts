@@ -10,9 +10,9 @@ import { notFound } from "./middleware/not-found.js";
 import { apiRouter } from "./routes/index.js";
 import { ensureUploadDirectories, uploadRoot } from "./utils/file-system.js";
 
-export function createApp() {
+export async function createApp() {
   const app = express();
-  void ensureUploadDirectories();
+  await ensureUploadDirectories();
 
   app.use(
     cors({

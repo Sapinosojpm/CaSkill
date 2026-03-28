@@ -1,7 +1,7 @@
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 
-const app = createApp();
+const app = await createApp();
 
 app.listen(env.PORT, () => {
   console.log(`CaSkill1 server listening on port ${env.PORT}`);

@@ -190,8 +190,8 @@ export async function findMatchmaking(userId: string, input: { gameId: string; s
 
   const matchedAt = new Date();
 
-  const [opponentEntry, playerEntry] = await prisma.$transaction([
-    prisma.matchQueueEntry.update({
+  const { playerEntry, opponentEntry } = await prisma.$transaction(async (tx) => {
+    const matchedOpponentEntry = await tx.matchQueueEntry.update({
       where: { id: waitingOpponent.id },
       data: {
         status: MatchQueueStatus.MATCHED,
@@ -200,8 +200,9 @@ export async function findMatchmaking(userId: string, input: { gameId: string; s
       include: {
         user: { select: { id: true, name: true } },
       },
-    }),
-    prisma.matchQueueEntry.create({
+    });
+
+    const newPlayerEntry = await tx.matchQueueEntry.create({
       data: {
         userId,
         gameId: input.gameId,
@@ -213,14 +214,16 @@ export async function findMatchmaking(userId: string, input: { gameId: string; s
       include: {
         user: { select: { id: true, name: true } },
       },
-    }),
-  ]);
+    });
 
-  await prisma.matchQueueEntry.update({
-    where: { id: opponentEntry.id },
-    data: {
-      opponentEntryId: playerEntry.id,
-    },
+    await tx.matchQueueEntry.update({
+      where: { id: matchedOpponentEntry.id },
+      data: {
+        opponentEntryId: newPlayerEntry.id,
+      },
+    });
+
+    return { playerEntry: newPlayerEntry, opponentEntry: matchedOpponentEntry };
   });
 
   return {

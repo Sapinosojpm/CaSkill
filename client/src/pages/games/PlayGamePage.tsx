@@ -31,9 +31,11 @@ export function PlayGamePage() {
   const attention = useAttentionMonitor(cameraRequested);
 
   const uploadOrigin = new URL(API_BASE_URL).origin;
+  const isBuiltIn = game?.playConfig.builtInGameKey && game.playConfig.builtInGameKey !== "uploaded-game";
+
   const estimatedPrizePool = selectedStake ? selectedStake * 2 : 0;
-  const estimatedCreatorShare = Math.round(estimatedPrizePool * 0.05);
-  const estimatedPlatformFee = Math.round(estimatedPrizePool * 0.1);
+  const estimatedCreatorShare = isBuiltIn ? 0 : Math.round(estimatedPrizePool * 0.05);
+  const estimatedPlatformFee = isBuiltIn ? Math.round(estimatedPrizePool * 0.15) : Math.round(estimatedPrizePool * 0.1);
   const estimatedWinnerPayout = Math.max(0, estimatedPrizePool - estimatedCreatorShare - estimatedPlatformFee);
   const isReadyToStart = Boolean(selectedStake) && attention.isReady;
 
@@ -108,16 +110,19 @@ export function PlayGamePage() {
           lastWarning: attention.lastWarning,
         },
       });
-
-      await endGameSession({
-        sessionToken: session.session.sessionToken,
-        lookAwayEvents: attention.lookAwayCount,
-        faceDetectedRatio: attention.faceVisibleRatio,
-      });
-
       setResult(score);
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, "Unable to submit score"));
+    } finally {
+      try {
+        await endGameSession({
+          sessionToken: session.session.sessionToken,
+          lookAwayEvents: attention.lookAwayCount,
+          faceDetectedRatio: attention.faceVisibleRatio,
+        });
+      } catch (endError) {
+        console.error("Failed to end session gracefully:", endError);
+      }
     }
   }
 
